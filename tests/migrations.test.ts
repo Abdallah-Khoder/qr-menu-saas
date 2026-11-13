@@ -66,6 +66,12 @@ describe('migration runner', () => {
     await migrate(pg, dir);
     writeFileSync(join(dir, '002_logo.sql'), 'ALTER TABLE restaurants ADD COLUMN logo_url TEXT;');
     expect(await migrate(pg, dir)).toEqual(['002_logo.sql']);
-    await pg.query(`INSERT INTO restaurants (name, public_slug, logo_url) VALUES ('A', 'abcdefghijkl', 'https://x')`);
+    const { rows } = await pg.query<{ id: string }>(
+      `INSERT INTO users (email, password_hash, role) VALUES ('o@example.com', 'h', 'owner') RETURNING id`,
+    );
+    await pg.query(
+      `INSERT INTO restaurants (owner_id, name, public_slug, logo_url) VALUES ($1, 'A', 'shaar-k3x9qp7vtz', 'https://x')`,
+      [rows[0].id],
+    );
   });
 });
