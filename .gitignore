@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# secrets: never commit these (only .env.example is allowed)
+.env
+.env.*
+!.env.example
+
+# build output
+.next/
+out/
+dist/
+coverage/
+
+# misc
+.DS_Store
+*.log
+next-env.d.ts
+*.tsbuildinfo
