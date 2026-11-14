@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, writeFileSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, copyFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { migrate } from '../scripts/migrate-lib.mjs';
@@ -123,6 +123,31 @@ describe('migration runner', () => {
     await migrate(pg, dir);
     writeFileSync(join(dir, '001_init.sql'), '-- edited later\nCREATE TABLE sneaky (id INT);');
     await expect(migrate(pg, dir)).rejects.toThrow(/already applied but has been modified/);
+  });
+
+  it('stops, and applies nothing, if an already-applied file has disappeared from the folder', async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, '001_a.sql'), 'CREATE TABLE a (id INT);');
+    writeFileSync(join(dir, '002_b.sql'), 'CREATE TABLE b (id INT);');
+    const pg = new PGlite();
+    await migrate(pg, dir);
+
+    unlinkSync(join(dir, '001_a.sql')); // deleted by mistake (or we are on the wrong branch)
+    writeFileSync(join(dir, '003_c.sql'), 'CREATE TABLE c (id INT);'); // a pending one is waiting
+
+    await expect(migrate(pg, dir)).rejects.toThrow(/missing from the migrations folder: 001_a\.sql/);
+    expect(await tables(pg)).not.toContain('c'); // nothing new was applied
+  });
+
+  it('lists every missing file', async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, '001_a.sql'), 'CREATE TABLE a (id INT);');
+    writeFileSync(join(dir, '002_b.sql'), 'CREATE TABLE b (id INT);');
+    const pg = new PGlite();
+    await migrate(pg, dir);
+    unlinkSync(join(dir, '002_b.sql'));
+    unlinkSync(join(dir, '001_a.sql'));
+    await expect(migrate(pg, dir)).rejects.toThrow(/001_a\.sql, 002_b\.sql/);
   });
 
   it('applies a new migration on top of an existing database', async () => {

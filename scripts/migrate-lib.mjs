@@ -40,6 +40,17 @@ export async function migrate(client, dir, log = () => {}) {
     .filter((f) => /^\d{3}_.+\.sql$/.test(f))
     .sort();
 
+  // A file that was applied but no longer exists means this folder cannot rebuild the schema
+  // on a fresh database. Stop before touching anything (usually: wrong branch, or a deleted file).
+  const present = new Set(files);
+  const missing = [...applied.keys()].filter((f) => !present.has(f)).sort();
+  if (missing.length > 0) {
+    throw new Error(
+      `Applied migration file(s) missing from the migrations folder: ${missing.join(', ')}. ` +
+        'Restore them, or switch to the branch that has them, before migrating.',
+    );
+  }
+
   const ran = [];
   for (const file of files) {
     const sql = readFileSync(join(dir, file), 'utf8');
