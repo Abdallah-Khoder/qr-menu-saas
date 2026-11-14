@@ -89,8 +89,10 @@ CREATE TABLE items (
   -- (the sizes carry the prices). "Either own price(s) or at least 2 sizes", and "the
   -- currencies the restaurant chose must be filled", are checked by the application:
   -- SQL cannot express rules that span two tables with a simple CHECK.
-  price_usd     NUMERIC(12,2) CHECK (price_usd >= 0),
-  price_lbp     NUMERIC(12,2) CHECK (price_lbp >= 0),
+  -- NUMERIC has a special value 'NaN' ("not a number") that PostgreSQL considers BIGGER than
+  -- every number, so ">= 0" alone would let it through. We refuse it explicitly.
+  price_usd     NUMERIC(12,2) CHECK (price_usd >= 0 AND price_usd <> 'NaN'),
+  price_lbp     NUMERIC(12,2) CHECK (price_lbp >= 0 AND price_lbp <> 'NaN'),
   image_url     TEXT    CHECK (image_url ~ '^https://'),
   sort_order    INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
   -- The category must belong to the SAME restaurant as the item. The database itself
@@ -107,8 +109,8 @@ CREATE TABLE item_sizes (
   item_id       UUID    NOT NULL,
   -- Short, chosen by the owner: S, M, L, XL, XXL...
   label         TEXT    NOT NULL CHECK (label ~ '^[A-Za-z0-9]{1,6}$'),
-  price_usd     NUMERIC(12,2) CHECK (price_usd >= 0),
-  price_lbp     NUMERIC(12,2) CHECK (price_lbp >= 0),
+  price_usd     NUMERIC(12,2) CHECK (price_usd >= 0 AND price_usd <> 'NaN'),
+  price_lbp     NUMERIC(12,2) CHECK (price_lbp >= 0 AND price_lbp <> 'NaN'),
   sort_order    INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
   -- A size without any price makes no sense.
   CONSTRAINT size_has_a_price CHECK (price_usd IS NOT NULL OR price_lbp IS NOT NULL),

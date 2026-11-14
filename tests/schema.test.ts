@@ -221,6 +221,25 @@ describe('prices', () => {
     await expect(add.size(pg, r, item, 'L', '-5')).rejects.toThrow();
   });
 
+  it("reject NaN ('not a number'), which PostgreSQL treats as bigger than any number", async () => {
+    const { restaurantId: r } = await add.tenant(pg, 'alpha');
+    const cat = await add.category(pg, r);
+    await expect(add.item(pg, r, cat, 'NaN')).rejects.toThrow();
+    const item = await add.item(pg, r, cat, null);
+    await expect(pg.query(`UPDATE items SET price_lbp = 'NaN' WHERE id = $1`, [item])).rejects.toThrow();
+    await expect(add.size(pg, r, item, 'S', 'NaN', null)).rejects.toThrow();
+    await expect(add.size(pg, r, item, 'M', null, 'NaN')).rejects.toThrow();
+    // a NaN must not count as "the size has a price" next to a missing one
+    expect(await count(pg, 'item_sizes')).toBe(0);
+  });
+
+  it('reject infinity too', async () => {
+    const { restaurantId: r } = await add.tenant(pg, 'alpha');
+    const cat = await add.category(pg, r);
+    await expect(add.item(pg, r, cat, 'Infinity')).rejects.toThrow();
+    await expect(add.item(pg, r, cat, '-Infinity')).rejects.toThrow();
+  });
+
   it('an item may have no price of its own (its sizes carry the prices)', async () => {
     const { restaurantId: r } = await add.tenant(pg, 'alpha');
     await add.item(pg, r, await add.category(pg, r), null);

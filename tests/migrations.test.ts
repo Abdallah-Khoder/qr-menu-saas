@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -48,6 +49,71 @@ describe('migration runner', () => {
     expect(await tables(pg)).toContain('ok'); // 001 stays
     const recorded = (await pg.query<{ filename: string }>('SELECT filename FROM schema_migrations')).rows;
     expect(recorded.map((r) => r.filename)).toEqual(['001_ok.sql']);
+  });
+
+  it('keeps the SQL and its record together: if recording fails, the SQL is undone too, and a retry works', async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, '001_ok.sql'), 'CREATE TABLE created_by_sql (id INT);');
+    const base = new PGlite();
+    let breakRecording = true;
+    const client = {
+      exec: (sql: string) => base.exec(sql),
+      query: (sql: string, params?: unknown[]) =>
+        breakRecording && sql.includes('INSERT INTO schema_migrations')
+          ? Promise.reject(new Error('recording failed'))
+          : base.query(sql, params),
+    };
+
+    await expect(migrate(client, dir)).rejects.toThrow(/001_ok\.sql failed and was rolled back/);
+    expect(await tables(base)).not.toContain('created_by_sql'); // the successful CREATE TABLE was undone
+    expect((await base.query('SELECT 1 FROM schema_migrations')).rows).toHaveLength(0);
+
+    breakRecording = false;
+    expect(await migrate(client, dir)).toEqual(['001_ok.sql']); // retry succeeds
+    expect(await tables(base)).toContain('created_by_sql');
+  });
+
+  it('takes the lock INSIDE each transaction, before it looks at the history', async () => {
+    const dir = tempDir();
+    writeFileSync(join(dir, '001_a.sql'), 'CREATE TABLE a (id INT);');
+    writeFileSync(join(dir, '002_b.sql'), 'CREATE TABLE b (id INT);');
+    const base = new PGlite();
+    const seen: string[] = [];
+    const label = (sql: string) =>
+      sql.trim() === 'BEGIN' ? 'BEGIN'
+      : sql.trim() === 'COMMIT' ? 'COMMIT'
+      : sql.includes('pg_advisory_xact_lock') ? 'LOCK'
+      : sql.includes('FROM schema_migrations WHERE filename') ? 'RECHECK'
+      : sql.includes('INSERT INTO schema_migrations') ? 'RECORD'
+      : null;
+    const client = {
+      exec: (sql: string) => { const l = label(sql); if (l) seen.push(l); return base.exec(sql); },
+      query: (sql: string, params?: unknown[]) => { const l = label(sql); if (l) seen.push(l); return base.query(sql, params); },
+    };
+    await migrate(client, dir);
+    expect(seen).toEqual(['BEGIN', 'LOCK', 'RECHECK', 'RECORD', 'COMMIT', 'BEGIN', 'LOCK', 'RECHECK', 'RECORD', 'COMMIT']);
+  });
+
+  it('if another runner applied the file while we waited for the lock, we skip it instead of failing', async () => {
+    const dir = tempDir();
+    const sql = 'CREATE TABLE only_once (id INT);';
+    writeFileSync(join(dir, '001_once.sql'), sql);
+    const base = new PGlite();
+    const checksum = createHash('sha256').update(sql).digest('hex');
+    const client = {
+      exec: (s: string) => base.exec(s),
+      query: async (s: string, params?: unknown[]) => {
+        const result = await base.query(s, params);
+        if (s.includes('pg_advisory_xact_lock')) {
+          // simulate the OTHER runner finishing its work right now
+          await base.exec(sql);
+          await base.query('INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2)', ['001_once.sql', checksum]);
+        }
+        return result;
+      },
+    };
+    expect(await migrate(client, dir)).toEqual([]); // nothing applied by us, and no "already exists" error
+    expect(await tables(base)).toContain('only_once');
   });
 
   it('stops if an already-applied migration was edited (dev and production would drift)', async () => {

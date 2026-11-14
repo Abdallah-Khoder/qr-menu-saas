@@ -55,8 +55,9 @@ Design decisions worth knowing:
 ## Migrations
 
 Schema changes are numbered SQL files in `db/migrations`. `npm run migrate` applies the new ones,
-each in a transaction, and records a checksum. If an already-applied file is edited, the runner
-stops instead of letting dev and production drift apart.
+each in a transaction (the SQL and its record succeed or fail together), and records a checksum.
+If an already-applied file is edited, the runner stops instead of letting dev and production
+drift apart. Two runners at the same time are serialized with a per-transaction lock.
 
 Which database is changed depends only on `DATABASE_URL` (copy `.env.example` to `.env.local`).
 Always run a new migration on the **dev** database first, then on production.
