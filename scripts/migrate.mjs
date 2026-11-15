@@ -4,12 +4,26 @@
 // change has been tried on dev. Which database it hits depends only on DATABASE_URL.
 import pg from 'pg';
 import { fileURLToPath } from 'node:url';
+import { createInterface } from 'node:readline/promises';
 import { migrate } from './migrate-lib.mjs';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
   console.error('DATABASE_URL is not set. Put it in .env.local (see .env.example).');
   process.exit(1);
+}
+
+// With --confirm (used by `npm run migrate:prod`) we stop and ask before touching the database.
+if (process.argv.includes('--confirm')) {
+  const { host, pathname } = new URL(url);
+  console.log(`Target database: ${host}${pathname}`);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question('This changes the PRODUCTION-style database. Type "yes" to continue: ');
+  rl.close();
+  if (answer.trim() !== 'yes') {
+    console.log('Cancelled.');
+    process.exit(1);
+  }
 }
 
 const pool = new pg.Client({ connectionString: url });
