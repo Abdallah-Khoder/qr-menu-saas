@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Db } from './db';
+import { isJsonRequest } from './json-request';
 import { login } from './login';
 import { createSessionToken } from './session';
 import { EMAIL_MAX, PASSWORD_MAX } from './credentials.mjs';
@@ -15,7 +16,7 @@ export type LoginResponse = {
 /** Pure request logic (no cookies here) so tests can run it without Next. */
 export async function handleLogin(request: Request, db: Db): Promise<LoginResponse> {
   // A form on another website cannot send JSON with this header, which blocks cross-site posts.
-  if (!request.headers.get('content-type')?.includes('application/json')) {
+  if (!isJsonRequest(request)) {
     return { status: 415, body: { error: 'نوع الطلب غير مقبول' } };
   }
   let json: unknown;

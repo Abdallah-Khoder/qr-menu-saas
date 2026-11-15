@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
+import { useHydrated } from '@/lib/use-hydrated';
 
 export default function LoginForm() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,8 +30,10 @@ export default function LoginForm() {
     setBusy(false);
   }
 
+  // method="post": if the page's JavaScript has not loaded, the browser must NOT put the
+  // email and password in the address bar (a plain GET form does exactly that).
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} method="post" action="/api/login">
       <label className="field">
         <span>البريد الإلكتروني</span>
         <input name="email" type="email" dir="ltr" autoComplete="username" required />
@@ -39,7 +43,7 @@ export default function LoginForm() {
         <input name="password" type="password" dir="ltr" autoComplete="current-password" required />
       </label>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="btn" disabled={busy}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
+      <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
     </form>
   );
 }
