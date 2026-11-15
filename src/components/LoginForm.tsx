@@ -28,8 +28,10 @@ export default function LoginForm() {
     setBusy(false);
   }
 
+  // method="post": if the page's JavaScript has not loaded, the browser must NOT put the
+  // email and password in the address bar (a plain GET form does exactly that).
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} method="post" action="/api/login">
       <label className="field">
         <span>البريد الإلكتروني</span>
         <input name="email" type="email" dir="ltr" autoComplete="username" required />
