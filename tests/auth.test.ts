@@ -7,6 +7,7 @@ import { login } from '../src/lib/login';
 import { handleLogin } from '../src/lib/login-request';
 import { getAdminStats } from '../src/lib/admin-stats';
 import { SignJWT } from 'jose';
+import { vi } from 'vitest';
 import { checkNewCredentials, EMAIL_MAX, PASSWORD_MAX } from '../src/lib/credentials.mjs';
 
 process.env.SESSION_SECRET = 'a'.repeat(40);
@@ -121,7 +122,9 @@ describe('login', () => {
   });
   it('deletes failure rows older than one day', async () => {
     await pg.query(`INSERT INTO login_attempts (key, created_at) VALUES ('ip:old', now() - interval '2 days')`);
+    vi.spyOn(Math, 'random').mockReturnValue(0); // force the occasional cleanup to run now
     await login(pg, 'nobody@example.com', 'bad', '5.5.5.5');
+    vi.restoreAllMocks();
     const old = await pg.query(`SELECT COUNT(*)::int AS n FROM login_attempts WHERE key = 'ip:old'`);
     expect((old.rows[0] as { n: number }).n).toBe(0);
   });
@@ -189,6 +192,11 @@ describe('credentials accepted by create-admin match what login accepts', () => 
     expect(checkNewCredentials(email, 'a'.repeat(PASSWORD_MAX + 1))).toMatch(/long/);
     expect(checkNewCredentials('a'.repeat(EMAIL_MAX) + '@example.com', 'a'.repeat(12))).toMatch(/long/);
     expect(checkNewCredentials('not-an-email', 'a'.repeat(12))).toMatch(/email/);
+    // the login form (type=email) cannot submit these, so the script must not create them
+    expect(checkNewCredentials('مستخدم@example.com', 'a'.repeat(12))).toMatch(/email/);
+    expect(checkNewCredentials('a b@example.com', 'a'.repeat(12))).toMatch(/email/);
+    expect(checkNewCredentials('a@example', 'a'.repeat(12))).toMatch(/email/);
+    expect(checkNewCredentials('first.last+tag@sub.example.co', 'a'.repeat(12))).toBeNull();
   });
   it('an account made with the longest allowed password can really log in', async () => {
     const pg = await makeDb();

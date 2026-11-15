@@ -2,6 +2,12 @@ import type { Db } from './db';
 
 export const MAX_FAILURES = 5;
 export const WINDOW_MINUTES = 15;
+const CLEANUP_CHANCE = 0.05; // on average once every 20 logins
+
+/** Old rows are useless, delete them to keep the table small. */
+export async function deleteOldAttempts(db: Db) {
+  await db.query(`DELETE FROM login_attempts WHERE created_at < now() - interval '1 day'`);
+}
 
 /**
  * Reserve one attempt BEFORE checking the password.
@@ -18,8 +24,8 @@ export async function reserveAttempt(
   db: Db,
   keys: string[],
 ): Promise<{ allowed: true; ids: string[] } | { allowed: false }> {
-  // Housekeeping: old rows are useless, keep the table small.
-  await db.query(`DELETE FROM login_attempts WHERE created_at < now() - interval '1 day'`);
+  // Housekeeping is only needed now and then, so most logins skip this extra database trip.
+  if (Math.random() < CLEANUP_CHANCE) await deleteOldAttempts(db);
 
   const inserted = await db.query(
     `INSERT INTO login_attempts (key) SELECT unnest($1::text[]) RETURNING id`,
