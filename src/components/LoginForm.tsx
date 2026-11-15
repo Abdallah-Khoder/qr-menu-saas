@@ -1,0 +1,45 @@
+'use client';
+import { useState } from 'react';
+
+export default function LoginForm() {
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const form = new FormData(e.currentTarget);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = data.redirect; // full reload so the new cookie is used
+        return;
+      }
+      setError(data.error ?? 'حدث خطأ غير متوقع. يُرجى المحاولة مرة أخرى.');
+    } catch {
+      setError('تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت.');
+    }
+    setBusy(false);
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label className="field">
+        <span>البريد الإلكتروني</span>
+        <input name="email" type="email" dir="ltr" autoComplete="username" required />
+      </label>
+      <label className="field">
+        <span>كلمة المرور</span>
+        <input name="password" type="password" dir="ltr" autoComplete="current-password" required />
+      </label>
+      {error && <p className="error" role="alert">{error}</p>}
+      <button className="btn" disabled={busy}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
+    </form>
+  );
+}

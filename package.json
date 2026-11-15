@@ -4,15 +4,34 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "test": "vitest run",
-    "migrate": "node --env-file=.env.local scripts/migrate.mjs"
+    "typecheck": "tsc --noEmit",
+    "migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "create-admin": "node --env-file=.env.local scripts/create-admin.mjs",
+    "migrate:prod": "node --env-file=.env.production.local scripts/migrate.mjs --confirm",
+    "create-admin:prod": "node --env-file=.env.production.local scripts/create-admin.mjs --confirm"
   },
   "dependencies": {
-    "pg": "^8.23.1"
+    "@neondatabase/serverless": "^1.2.1",
+    "jose": "^6.2.17",
+    "next": "^16.4.6",
+    "pg": "^8.23.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.16",
     "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6",
+    "typescript": "^5.9.3",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
