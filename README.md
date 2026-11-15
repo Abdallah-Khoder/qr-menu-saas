@@ -62,6 +62,36 @@ drift apart. Two runners at the same time are serialized with a per-transaction 
 Which database is changed depends only on `DATABASE_URL` (copy `.env.example` to `.env.local`).
 Always run a new migration on the **dev** database first, then on production.
 
+## Running it
+
+```
+npm install
+cp .env.example .env.local     # then fill DATABASE_URL and SESSION_SECRET
+npm run migrate                # creates the tables in the database of DATABASE_URL
+npm run create-admin           # creates the super-admin (asks email + password, hidden)
+npm run dev                    # http://localhost:3000
+```
+
+`create-admin` refuses to run if a super-admin already exists. For the production database use
+`npm run migrate:prod` and `npm run create-admin:prod` (they read `.env.production.local` and ask
+you to type `yes` after showing which database they will touch).
+
+## Login and security
+
+- **Session**: a signed cookie that contains only the user id (`HttpOnly`, `Secure` in production,
+  `SameSite=Lax`, 7 days). The user is re-read from the database on every request, so deleting an
+  account or changing a role takes effect immediately.
+- **Passwords**: scrypt with a random salt (built into Node). Format `scrypt$N$r$p$salt$hash`.
+- **One generic error** for a wrong password and an unknown email, and the same amount of work in
+  both cases, so nobody can discover which emails exist.
+- **Rate limit** stored in the database (`login_attempts`): 5 failures in 15 minutes per IP and per
+  email, then HTTP 429. Works on serverless, where memory is not shared between requests.
+- **CSRF**: the login endpoint only accepts `application/json`, which another website cannot send
+  from a plain form.
+- **Two layers of protection**: `proxy.ts` quickly redirects visitors with no cookie, and every
+  protected page checks the real session (`requireSuperAdmin`, `requireOwner`). The proxy alone
+  is never trusted.
+
 ## Tests
 
 ```
