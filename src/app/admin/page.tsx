@@ -19,7 +19,7 @@ export default async function AdminHome() {
         <section className="panel">
           <div className="empty">
             <b>لا توجد مطاعم بعد</b>
-            ستتمكّن في الخطوة القادمة من إنشاء دعوة وإرسالها إلى صاحب مطعم ليسجّل حسابه.
+            أرسل دعوة من صفحة «الدعوات» ليُنشئ صاحب المطعم حسابه.
           </div>
         </section>
       )}
