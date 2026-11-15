@@ -13,12 +13,12 @@ const tables = async (pg: PGlite) =>
     .sort();
 
 describe('migration runner', () => {
-  it('applies the real migrations and creates all 7 tables', async () => {
+  it('applies the real migrations and creates all the tables', async () => {
     const pg = new PGlite();
     const ran = await migrate(pg, 'db/migrations');
-    expect(ran).toEqual(['001_init.sql']);
+    expect(ran).toEqual(['001_init.sql', '002_login_attempts.sql']);
     expect(await tables(pg)).toEqual(
-      ['categories', 'email_codes', 'invites', 'item_sizes', 'items', 'restaurants', 'schema_migrations', 'users'],
+      ['categories', 'email_codes', 'invites', 'item_sizes', 'items', 'login_attempts', 'restaurants', 'schema_migrations', 'users'],
     );
   });
 
