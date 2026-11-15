@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Db } from './db';
 
 export const MAX_FAILURES = 5;
@@ -27,15 +28,16 @@ export async function reserveAttempt(
   // Housekeeping is only needed now and then, so most logins skip this extra database trip.
   if (Math.random() < CLEANUP_CHANCE) await deleteOldAttempts(db);
 
+  // All rows of this request share one request_id: that is what makes every key rank us the same way.
   const inserted = await db.query(
-    `INSERT INTO login_attempts (key) SELECT unnest($1::text[]) RETURNING id`,
-    [keys],
+    `INSERT INTO login_attempts (key, request_id) SELECT unnest($1::text[]), $2::uuid RETURNING id`,
+    [keys, randomUUID()],
   );
   const ids: string[] = inserted.rows.map((r) => r.id);
 
   // Count only the rows that are NOT newer than ours (same key, inside the window).
   // Counting everything would be wrong when many requests arrive together: all of them would
-  // write first, then all would count 20 and ALL be refused. Ranking by (time, id) gives each
+  // write first, then all would count 20 and ALL be refused. Ranking by (time, request_id) gives each
   // request its place in the queue: places 1-5 are checked, place 6 and later are refused.
   const counted = await db.query(
     `SELECT m.key, COUNT(*)::int AS n
@@ -43,7 +45,7 @@ export async function reserveAttempt(
      JOIN login_attempts a
        ON a.key = m.key
       AND a.created_at > now() - make_interval(mins => $2)
-      AND (a.created_at, a.id) <= (m.created_at, m.id)
+      AND (a.created_at, a.request_id) <= (m.created_at, m.request_id)
      WHERE m.id = ANY($1::uuid[])
      GROUP BY m.key`,
     [ids, WINDOW_MINUTES],
