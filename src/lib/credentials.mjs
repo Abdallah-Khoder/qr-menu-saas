@@ -11,6 +11,11 @@ export const PASSWORD_MAX = 200;
 const EMAIL_PATTERN =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+/** True if the email is acceptable (same rule as the login form). */
+export function isValidEmail(email) {
+  return email.length <= EMAIL_MAX && EMAIL_PATTERN.test(email);
+}
+
 /** Returns an error message (string) when the pair is not acceptable, otherwise null. */
 export function checkNewCredentials(email, password) {
   if (!EMAIL_PATTERN.test(email)) return 'That does not look like an email (use English letters and digits).';
