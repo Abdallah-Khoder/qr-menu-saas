@@ -156,6 +156,10 @@ describe('login request', () => {
     const r = await handleLogin(req('email=a&password=b', { 'content-type': 'application/x-www-form-urlencoded' }), pg);
     expect(r.status).toBe(415);
   });
+  it('rejects text/plain; note=application/json (415)', async () => {
+    const r = await handleLogin(req('{"email":"a@b.co","password":"x"}', { 'content-type': 'text/plain; note=application/json' }), pg);
+    expect(r.status).toBe(415);
+  });
   it('400 for broken or incomplete bodies', async () => {
     expect((await handleLogin(req('{not json'), pg)).status).toBe(400);
     expect((await handleLogin(req({ email: 'a@b.co' }), pg)).status).toBe(400);

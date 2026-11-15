@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { checkAdminRequest, idSchema, readBody } from '../src/lib/admin-guard';
+import { isJsonRequest } from '../src/lib/json-request';
 
 const json = { 'content-type': 'application/json' };
 const req = (headers: Record<string, string> = json, body = '{}') => new Request('http://x/api/admin/x', { method: 'POST', headers, body });
@@ -24,6 +25,24 @@ describe('checkAdminRequest', () => {
   it('checks who you are before anything else', () => {
     expect(checkAdminRequest(req({}), owner)?.status).toBe(403);
     expect(checkAdminRequest(req({}), null)?.status).toBe(401);
+  });
+});
+
+describe('JSON content-type check compares the media type exactly', () => {
+  const withType = (t: string) => new Request('http://x', { method: 'POST', headers: { 'content-type': t }, body: '{}' });
+  it('accepts application/json with parameters and any letter case', () => {
+    for (const t of ['application/json', 'application/json; charset=utf-8', 'Application/JSON', ' application/json ;charset=utf-8']) {
+      expect(isJsonRequest(withType(t))).toBe(true);
+    }
+  });
+  it('rejects types that only CONTAIN the words (they can be sent cross-site without a preflight)', () => {
+    for (const t of ['text/plain; note=application/json', 'text/plain', 'application/jsonx', 'application/x-www-form-urlencoded; a=application/json', '']) {
+      expect(isJsonRequest(withType(t))).toBe(false);
+    }
+    expect(isJsonRequest(new Request('http://x', { method: 'POST', body: '{}' }))).toBe(false);
+  });
+  it('the admin guard answers 415 to text/plain; note=application/json', () => {
+    expect(checkAdminRequest(withType('text/plain; note=application/json'), admin)?.status).toBe(415);
   });
 });
 

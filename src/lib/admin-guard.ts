@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CurrentUser } from './current-user';
+import { isJsonRequest } from './json-request';
 
 export const idSchema = z.string().uuid();
 
@@ -12,7 +13,7 @@ export function checkAdminRequest(request: Request, user: CurrentUser | null): R
   if (!user) return Response.json({ error: 'يجب تسجيل الدخول' }, { status: 401 });
   if (user.role !== 'super_admin') return Response.json({ error: 'غير مصرّح لك بهذا الإجراء' }, { status: 403 });
   // A form on another website cannot send JSON with this header, which blocks cross-site posts.
-  if (!request.headers.get('content-type')?.includes('application/json')) {
+  if (!isJsonRequest(request)) {
     return Response.json({ error: 'نوع الطلب غير مقبول' }, { status: 415 });
   }
   return null;
