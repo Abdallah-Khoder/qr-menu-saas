@@ -92,6 +92,19 @@ you to type `yes` after showing which database they will touch).
   protected page checks the real session (`requireSuperAdmin`, `requireOwner`). The proxy alone
   is never trusted.
 
+## Invitations
+
+Owners cannot sign up on their own. The super-admin invites them from **/admin/invites**: the
+server creates a random token, stores only its SHA-256 hash, and emails the link
+(`APP_URL/signup?token=...`). The link works for **20 minutes**, once. The token is never sent
+to the admin's browser, only to the owner's inbox. A new invite for the same email cancels the
+older one, and an email that already has an account is refused. If the email cannot be sent, the
+invite is deleted instead of staying open.
+
+Emails go through any SMTP service chosen only by environment variables (see `.env.example`).
+Without `SMTP_HOST`, on your computer, the email is printed in the terminal; on the deployed
+site it refuses to run (so secret links never end up in the logs).
+
 ## Tests
 
 ```
