@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import pg from 'pg';
 import { hashPassword } from '../src/lib/password.mjs';
+import { checkNewCredentials } from '../src/lib/credentials.mjs';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -45,9 +46,9 @@ try {
     process.exit(1);
   }
   const email = (await ask('Email: ')).trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('That does not look like an email.');
-  const password = await ask('Password (at least 12 characters): ', true);
-  if (password.length < 12) throw new Error('Password is too short (minimum 12).');
+  const password = await ask('Password (12 to 200 characters): ', true);
+  const problem = checkNewCredentials(email, password);
+  if (problem) throw new Error(problem);
   const again = await ask('Repeat password: ', true);
   if (password !== again) throw new Error('The two passwords are different.');
 

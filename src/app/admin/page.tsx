@@ -1,7 +1,10 @@
 import { getDb } from '@/lib/db';
 import { getAdminStats } from '@/lib/admin-stats';
+import { requireSuperAdmin } from '@/lib/current-user';
 
 export default async function AdminHome() {
+  // The layout checks too, but layouts are not re-run on every navigation: the page that reads data must check itself.
+  await requireSuperAdmin();
   const s = await getAdminStats(getDb());
   return (
     <>

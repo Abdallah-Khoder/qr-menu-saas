@@ -7,6 +7,7 @@ import { login } from '../src/lib/login';
 import { handleLogin } from '../src/lib/login-request';
 import { getAdminStats } from '../src/lib/admin-stats';
 import { SignJWT } from 'jose';
+import { checkNewCredentials, EMAIL_MAX, PASSWORD_MAX } from '../src/lib/credentials.mjs';
 
 process.env.SESSION_SECRET = 'a'.repeat(40);
 
@@ -158,5 +159,27 @@ describe('admin stats', () => {
     await pg.query(`INSERT INTO invites (token_hash, created_by, expires_at) VALUES ('h2', $1, now() - interval '1 day')`, [admin]);
     await pg.query(`INSERT INTO invites (token_hash, created_by, expires_at, used_at) VALUES ('h3', $1, now() + interval '1 day', now())`, [admin]);
     expect(await getAdminStats(pg)).toEqual({ restaurants: 2, active: 1, suspended: 1, openInvites: 1 });
+  });
+});
+
+describe('credentials accepted by create-admin match what login accepts', () => {
+  const email = 'boss@example.com';
+  it('accepts a normal pair and the exact limits', () => {
+    expect(checkNewCredentials(email, 'a'.repeat(12))).toBeNull();
+    expect(checkNewCredentials(email, 'a'.repeat(PASSWORD_MAX))).toBeNull();
+    expect(checkNewCredentials('a'.repeat(EMAIL_MAX - 12) + '@example.com', 'a'.repeat(12))).toBeNull();
+  });
+  it('refuses too short, too long, and bad emails', () => {
+    expect(checkNewCredentials(email, 'a'.repeat(11))).toMatch(/short/);
+    expect(checkNewCredentials(email, 'a'.repeat(PASSWORD_MAX + 1))).toMatch(/long/);
+    expect(checkNewCredentials('a'.repeat(EMAIL_MAX) + '@example.com', 'a'.repeat(12))).toMatch(/long/);
+    expect(checkNewCredentials('not-an-email', 'a'.repeat(12))).toMatch(/email/);
+  });
+  it('an account made with the longest allowed password can really log in', async () => {
+    const pg = await makeDb();
+    const longest = 'p'.repeat(PASSWORD_MAX);
+    await userWithPassword(pg, email, longest, 'super_admin');
+    const r = await handleLogin(req({ email, password: longest }), pg);
+    expect(r.status).toBe(200);
   });
 });

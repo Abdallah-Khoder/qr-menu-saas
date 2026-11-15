@@ -6,6 +6,7 @@
   --line: #e9dfd2;
   --brand: #c2542d;
   --brand-dark: #a24322;
+  --on-brand: #ffffff;
   --ok: #2f7d4f;
   --warn: #b7791f;
   --danger: #b3261e;
@@ -20,6 +21,7 @@
     --line: #3a2f26;
     --brand: #e0764d;
     --brand-dark: #ee8a62;
+    --on-brand: #1a0f08; /* dark text on the light orange: contrast above 6:1 */
   }
 }
 * { box-sizing: border-box; }
@@ -50,7 +52,7 @@ button, input { font: inherit; color: inherit; }
 .field input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
 .btn {
   width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--brand);
-  color: #fff; font-weight: 700; cursor: pointer; font-size: 1rem;
+  color: var(--on-brand); font-weight: 700; cursor: pointer; font-size: 1rem;
 }
 .btn:hover { background: var(--brand-dark); }
 .btn:disabled { opacity: .6; cursor: wait; }

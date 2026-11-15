@@ -2,8 +2,9 @@ import { z } from 'zod';
 import type { Db } from './db';
 import { login } from './login';
 import { createSessionToken } from './session';
+import { EMAIL_MAX, PASSWORD_MAX } from './credentials.mjs';
 
-const Body = z.object({ email: z.string().max(254), password: z.string().min(1).max(200) });
+const Body = z.object({ email: z.string().max(EMAIL_MAX), password: z.string().min(1).max(PASSWORD_MAX) });
 
 export type LoginResponse = {
   status: number;
