@@ -24,7 +24,7 @@ export default function LogoutButton() {
       // network failure: handled below, same as an error answer
     }
     // We only leave the page after a SUCCESSFUL answer, otherwise the cookie would still be there.
-    setError('ما زبطت، جرّب مرة ثانية');
+    setError('تعذّر تسجيل الخروج. يُرجى المحاولة مرة أخرى.');
     setBusy(false);
   }
 

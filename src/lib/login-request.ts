@@ -31,10 +31,10 @@ export async function handleLogin(request: Request, db: Db): Promise<LoginRespon
   const result = await login(db, parsed.data.email, parsed.data.password, ip);
 
   if (!result.ok && result.reason === 'rate_limited') {
-    return { status: 429, body: { error: 'محاولات كثيرة. جرّب بعد 15 دقيقة.' } };
+    return { status: 429, body: { error: 'عدد المحاولات كبير. يُرجى المحاولة بعد 15 دقيقة.' } };
   }
   if (!result.ok) {
-    return { status: 401, body: { error: 'الإيميل أو كلمة السر غير صحيحة' } };
+    return { status: 401, body: { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' } };
   }
   return {
     status: 200,

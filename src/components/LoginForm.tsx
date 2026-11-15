@@ -21,9 +21,9 @@ export default function LoginForm() {
         window.location.href = data.redirect; // full reload so the new cookie is used
         return;
       }
-      setError(data.error ?? 'صار خطأ، جرّب مرة ثانية');
+      setError(data.error ?? 'حدث خطأ غير متوقع. يُرجى المحاولة مرة أخرى.');
     } catch {
-      setError('ما في اتصال بالإنترنت');
+      setError('تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت.');
     }
     setBusy(false);
   }
@@ -31,15 +31,15 @@ export default function LoginForm() {
   return (
     <form onSubmit={onSubmit}>
       <label className="field">
-        <span>الإيميل</span>
+        <span>البريد الإلكتروني</span>
         <input name="email" type="email" dir="ltr" autoComplete="username" required />
       </label>
       <label className="field">
-        <span>كلمة السر</span>
+        <span>كلمة المرور</span>
         <input name="password" type="password" dir="ltr" autoComplete="current-password" required />
       </label>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="btn" disabled={busy}>{busy ? 'لحظة...' : 'دخول'}</button>
+      <button className="btn" disabled={busy}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
     </form>
   );
 }

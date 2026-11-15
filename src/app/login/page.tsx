@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
+import Brand from '@/components/Brand';
 import LoginForm from '@/components/LoginForm';
 import { getCurrentUser } from '@/lib/current-user';
+
+export const metadata = { title: 'تسجيل الدخول' };
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
@@ -8,8 +11,8 @@ export default async function LoginPage() {
   return (
     <main className="auth-wrap">
       <div className="auth-card">
-        <h1 className="logo">منيو QR</h1>
-        <p className="sub">سجّل دخولك لإدارة المنيو</p>
+        <Brand as="h1" />
+        <p className="sub">سجّل الدخول لإدارة قائمة الطعام</p>
         <LoginForm />
       </div>
     </main>
