@@ -2,12 +2,14 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { postJson } from '@/lib/post-json';
+import { useHydrated } from '@/lib/use-hydrated';
 
 export default function InviteForm() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [done, setDone] = useState('');
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,12 +27,12 @@ export default function InviteForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="inline-form">
+    <form onSubmit={onSubmit} method="post" action="/api/admin/invites" className="inline-form">
       <label className="field grow">
         <span>البريد الإلكتروني لصاحب المطعم</span>
         <input name="email" type="email" dir="ltr" required autoComplete="off" />
       </label>
-      <button className="btn" disabled={busy}>{busy ? 'جارٍ الإرسال...' : 'إرسال الدعوة'}</button>
+      <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ الإرسال...' : 'إرسال الدعوة'}</button>
       {error && <p className="error" role="alert">{error}</p>}
       {done && <p className="success" role="status">{done}</p>}
     </form>

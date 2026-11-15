@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
+import { useHydrated } from '@/lib/use-hydrated';
 
 export default function LoginForm() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,7 +43,7 @@ export default function LoginForm() {
         <input name="password" type="password" dir="ltr" autoComplete="current-password" required />
       </label>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="btn" disabled={busy}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
+      <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}</button>
     </form>
   );
 }
