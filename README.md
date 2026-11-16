@@ -143,6 +143,11 @@ restaurant's category id just gets 404.
 - **Categories:** add, rename, move up/down, delete (its items are deleted with it, the confirmation
   window says how many). Up to 50 per restaurant. Moving renumbers 1..n inside one statement, so
   duplicates or gaps in `sort_order` cannot break the order.
+- **Suspended restaurants:** when the admin suspends a restaurant, its owner can still log in and look,
+  but every write is refused (403, "تم إيقاف مطعمك من الإدارة..."). This is enforced in the SQL of each
+  write (`status = 'active'` next to the owner filter), not only by hiding buttons, so a direct request
+  fails too. The dashboard shows a red banner and disables the forms. Activating it again restores
+  everything. (The public menu page will show "unavailable" when it is built.)
 - **Confirmation windows** are our own (`ConfirmDialog`, a native `<dialog>`), never the browser's `confirm()`.
 
 ## Tests

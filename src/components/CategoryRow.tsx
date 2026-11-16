@@ -6,7 +6,9 @@ import RowAction from './RowAction';
 
 type Category = { id: string; name: string; item_count: number };
 
-export default function CategoryRow({ category, first, last }: { category: Category; first: boolean; last: boolean }) {
+export default function CategoryRow({
+  category, first, last, disabled = false,
+}: { category: Category; first: boolean; last: boolean; disabled?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
@@ -33,8 +35,8 @@ export default function CategoryRow({ category, first, last }: { category: Categ
     <li className="row wrap">
       {editing ? (
         <form className="cat-edit" onSubmit={save}>
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" disabled={busy} />
-          <button className="btn small" disabled={busy}>حفظ</button>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" disabled={busy || disabled} />
+          <button className="btn small" disabled={busy || disabled}>حفظ</button>
           <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setEditing(false); setError(''); }}>إلغاء</button>
         </form>
       ) : (
@@ -45,10 +47,10 @@ export default function CategoryRow({ category, first, last }: { category: Categ
       )}
       {!editing && (
         <div className="actions">
-          {!first && <RowAction url={`${url}/move`} body={{ direction: 'up' }} label="↑" ariaLabel="تحريك إلى الأعلى" />}
-          {!last && <RowAction url={`${url}/move`} body={{ direction: 'down' }} label="↓" ariaLabel="تحريك إلى الأسفل" />}
-          <button className="btn ghost small" onClick={() => { setName(category.name); setEditing(true); }}>تعديل الاسم</button>
-          <RowAction url={`${url}/delete`} label="حذف" confirm={warning} confirmLabel="نعم، احذف" danger />
+          {!first && <RowAction url={`${url}/move`} body={{ direction: 'up' }} label="↑" ariaLabel="تحريك إلى الأعلى" disabled={disabled} />}
+          {!last && <RowAction url={`${url}/move`} body={{ direction: 'down' }} label="↓" ariaLabel="تحريك إلى الأسفل" disabled={disabled} />}
+          <button className="btn ghost small" disabled={disabled} onClick={() => { setName(category.name); setEditing(true); }}>تعديل الاسم</button>
+          <RowAction url={`${url}/delete`} label="حذف" confirm={warning} confirmLabel="نعم، احذف" danger disabled={disabled} />
         </div>
       )}
       {error && <span className="error small-text" role="alert">{error}</span>}

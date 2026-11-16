@@ -2,6 +2,8 @@ import Brand from '@/components/Brand';
 import LogoutButton from '@/components/LogoutButton';
 import NavLinks from '@/components/NavLinks';
 import { requireOwner } from '@/lib/current-user';
+import { SUSPENDED_MESSAGE } from '@/lib/owner-menu';
+import { getMyRestaurant } from '@/lib/owner-page';
 
 const LINKS = [
   { href: '/dashboard', label: 'الرئيسية' },
@@ -13,6 +15,7 @@ export const metadata = { title: 'لوحة المطعم' };
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const user = await requireOwner(); // the real check: runs on every request
+  const restaurant = await getMyRestaurant(user.id);
   return (
     <div className="shell">
       <aside className="side">
@@ -22,7 +25,12 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
         <div className="who" dir="ltr">{user.email}</div>
         <LogoutButton />
       </aside>
-      <main className="main">{children}</main>
+      <main className="main">
+        {restaurant?.status === 'suspended' && (
+          <div className="banner" role="alert">{SUSPENDED_MESSAGE} قائمتك غير ظاهرة للزبائن حاليًا.</div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

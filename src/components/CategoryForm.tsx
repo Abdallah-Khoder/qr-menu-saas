@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { postJson } from '@/lib/post-json';
 import { useHydrated } from '@/lib/use-hydrated';
 
-export default function CategoryForm() {
+export default function CategoryForm({ disabled = false }: { disabled?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,9 +26,9 @@ export default function CategoryForm() {
     <form onSubmit={onSubmit} method="post" action="/api/owner/categories" className="inline-form">
       <label className="field grow">
         <span>اسم القسم</span>
-        <input name="name" maxLength={80} required autoComplete="off" disabled={busy} />
+        <input name="name" maxLength={80} required autoComplete="off" disabled={busy || disabled} />
       </label>
-      <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ الإضافة...' : 'إضافة'}</button>
+      <button className="btn" disabled={busy || !hydrated || disabled}>{busy ? 'جارٍ الإضافة...' : 'إضافة'}</button>
       {error && <p className="error" role="alert">{error}</p>}
     </form>
   );

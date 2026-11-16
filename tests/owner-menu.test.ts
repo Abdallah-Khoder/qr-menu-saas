@@ -3,7 +3,7 @@ import { add, makeDb } from './helpers';
 import { checkOwnerRequest } from '../src/lib/owner-guard';
 import { parseFacebook, parseInstagram, parseMapUrl, parsePhone } from '../src/lib/owner-input';
 import {
-  MAX_CATEGORIES, createCategory, deleteCategory, getOwnerRestaurant, listCategories, moveCategory,
+  MAX_CATEGORIES, SUSPENDED_MESSAGE, createCategory, deleteCategory, getOwnerRestaurant, listCategories, moveCategory,
   renameCategory, saveSettings,
 } from '../src/lib/owner-menu';
 
@@ -246,5 +246,69 @@ describe('categories', () => {
     const out = await Promise.all(['X', 'Y', 'Z'].map((n) => createCategory(pg, a.ownerId, n)));
     expect(out.every((o) => o.ok)).toBe(true);
     expect(await listCategories(pg, a.ownerId)).toHaveLength(3);
+  });
+});
+
+describe('a suspended restaurant cannot change anything', () => {
+  async function suspended() {
+    const ctx = await setup();
+    await createCategory(ctx.pg, ctx.a.ownerId, 'First');
+    await createCategory(ctx.pg, ctx.a.ownerId, 'Second');
+    await createCategory(ctx.pg, ctx.b.ownerId, 'Other restaurant');
+    const [first, second] = await listCategories(ctx.pg, ctx.a.ownerId);
+    await ctx.pg.query(`UPDATE restaurants SET status = 'suspended' WHERE id = $1`, [ctx.a.restaurantId]);
+    return { ...ctx, first, second };
+  }
+  const refused = { ok: false, status: 403, error: SUSPENDED_MESSAGE };
+
+  it('every write is refused with the same clear 403', async () => {
+    const { pg, a, first, second } = await suspended();
+    expect(await saveSettings(pg, a.ownerId, settings({ name: 'Changed', currencies: 'BOTH' }))).toEqual(refused);
+    expect(await createCategory(pg, a.ownerId, 'New')).toEqual(refused);
+    expect(await renameCategory(pg, a.ownerId, first.id, 'Renamed')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, second.id, 'up')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, first.id, 'up')).toEqual(refused); // even a move that would change nothing
+    expect(await deleteCategory(pg, a.ownerId, first.id)).toEqual(refused);
+  });
+
+  it('and nothing in the database changed', async () => {
+    const { pg, a } = await suspended();
+    await saveSettings(pg, a.ownerId, settings({ name: 'Changed' }));
+    await createCategory(pg, a.ownerId, 'New');
+    const [first, second] = await listCategories(pg, a.ownerId);
+    await renameCategory(pg, a.ownerId, first.id, 'Renamed');
+    await moveCategory(pg, a.ownerId, second.id, 'up');
+    await deleteCategory(pg, a.ownerId, first.id);
+    expect((await listCategories(pg, a.ownerId)).map((c) => c.name)).toEqual(['First', 'Second']);
+    expect((await getOwnerRestaurant(pg, a.ownerId))!.name).toBe('Some restaurant');
+  });
+
+  it('he can still look at everything', async () => {
+    const { pg, a } = await suspended();
+    expect(await listCategories(pg, a.ownerId)).toHaveLength(2);
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ status: 'suspended' });
+  });
+
+  it('other restaurants are not affected', async () => {
+    const { pg, b } = await suspended();
+    expect(await createCategory(pg, b.ownerId, 'Still works')).toEqual({ ok: true });
+    expect(await saveSettings(pg, b.ownerId, settings({ name: 'Beta renamed' }))).toEqual({ ok: true });
+  });
+
+  it('once the admin activates it again, everything works again', async () => {
+    const { pg, a, first } = await suspended();
+    await pg.query(`UPDATE restaurants SET status = 'active' WHERE id = $1`, [a.restaurantId]);
+    expect(await renameCategory(pg, a.ownerId, first.id, 'Renamed')).toEqual({ ok: true });
+    expect(await createCategory(pg, a.ownerId, 'New')).toEqual({ ok: true });
+    expect(await saveSettings(pg, a.ownerId, settings({ name: 'Back' }))).toEqual({ ok: true });
+  });
+
+  it('suspended and also a wrong category id: still the suspended message (nothing is revealed)', async () => {
+    const { pg, a } = await suspended();
+    const unknown = '11111111-1111-4111-8111-111111111111';
+    expect(await deleteCategory(pg, a.ownerId, unknown)).toEqual(refused);
+    expect(await renameCategory(pg, a.ownerId, unknown, 'x')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, unknown, 'up')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, unknown, 'down')).toEqual(refused);
   });
 });
