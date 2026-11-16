@@ -212,7 +212,7 @@ describe('handleSignup', () => {
     const { pg, token } = await setup();
     const flaky = {
       query: async (text: string, params?: unknown[]) => {
-        if (text.startsWith('DELETE FROM login_attempts')) throw new Error('database hiccup');
+        if (text.startsWith('DELETE FROM login_attempts WHERE id = ANY')) throw new Error('database hiccup');
         return pg.query(text, params as never[]);
       },
     };
