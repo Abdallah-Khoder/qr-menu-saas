@@ -208,6 +208,20 @@ describe('handleSignup', () => {
     expect((await handleSignup(post(good(token), '9.9.9.9'), pg)).status).toBe(200);
   });
 
+  it('if the cleanup of the attempt counter fails after the account is made, the owner still gets in', async () => {
+    const { pg, token } = await setup();
+    const flaky = {
+      query: async (text: string, params?: unknown[]) => {
+        if (text.startsWith('DELETE FROM login_attempts')) throw new Error('database hiccup');
+        return pg.query(text, params as never[]);
+      },
+    };
+    const out = await handleSignup(post(good(token)), flaky);
+    expect(out.status).toBe(200);
+    expect(out.token).toBeTruthy();
+    expect(await count(pg, 'restaurants')).toBe(1);
+  });
+
   it('a successful sign-up does not leave a counted attempt behind', async () => {
     const { pg, token } = await setup();
     await handleSignup(post(good(token)), pg);

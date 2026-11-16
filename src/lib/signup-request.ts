@@ -54,6 +54,12 @@ export async function handleSignup(request: Request, db: Db): Promise<SignupResp
   const result = await signUpOwner(db, { token: parsed.data.token, name, password: parsed.data.password });
   if (!result.ok) return { status: 400, body: { error: 'الرابط غير صالح' } };
 
-  await releaseAttempts(db, slot.ids);
+  // The account already exists: a failed cleanup of the attempt counter must not turn this into an error.
+  // (A leftover attempt row simply expires by itself.)
+  try {
+    await releaseAttempts(db, slot.ids);
+  } catch (e) {
+    console.error('signup: could not release the attempt counter', e);
+  }
   return { status: 200, body: { redirect: '/dashboard' }, token: await createSessionToken(result.userId) };
 }
