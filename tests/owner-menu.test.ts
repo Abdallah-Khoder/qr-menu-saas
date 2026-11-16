@@ -80,7 +80,7 @@ describe('parseMapUrl', () => {
     for (const good of [
       'https://maps.app.goo.gl/abc123', 'https://www.google.com/maps/place/Shaar+Crepe/@33.89,35.5,17z', 'https://google.com.lb/maps?q=33.89,35.5',
       'https://maps.google.com/?q=33.89,35.5', 'https://goo.gl/maps/xyz', 'https://waze.com/ul?ll=33.89,35.5', 'https://ul.waze.com/ul?ll=1,2',
-      'https://maps.apple.com/?ll=33.89,35.5',
+      'https://maps.apple.com/?ll=33.89,35.5', 'https://www.google.ch/maps?q=47.37,8.54', 'https://www.google.co.jp/maps/place/x',
     ]) {
       expect(parseMapUrl(good).ok, good).toBe(true);
     }
