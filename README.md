@@ -122,6 +122,29 @@ written with Latin letters (sound-alike, not translated: `مطعم الشعار`
 the restaurant name itself is stored and shown exactly as typed. A name with no usable letters
 (emoji only) gives `menu`. Guessing links is limited to 5 tries per 15 minutes per IP.
 
+## Owner dashboard (`/dashboard`)
+
+Pages: Home (menu link, dashboard link, a QR code for each), Menu (categories), Settings.
+Everything an owner can do is under `/api/owner/*`. The guard order is: 401 (not logged in) →
+403 (not an owner) → 415 (not JSON) → 404 (bad id) → 400 (bad body).
+
+**The restaurant is never sent by the browser.** The data functions in `src/lib/owner-menu.ts` take the
+owner's own id (from his login) and find his restaurant inside the same SQL statement
+(`restaurant_id = (SELECT id FROM restaurants WHERE owner_id = $1)`). An owner who sends another
+restaurant's category id just gets 404.
+
+- **Settings:** name (the public link never changes with it, so printed QR codes stay valid), currency
+  (`USD`, `LBP` or `BOTH`), phone (`+961...`; Lebanese local numbers and Arabic digits are accepted),
+  map link (https only), Instagram and Facebook (each optional, any combination; account name or the real
+  link, other websites are refused so an icon can never lead somewhere else).
+- **Currency change:** refused while some item or size has no price in the chosen currency; the same SQL
+  statement counts them and only updates when there are none. Going back to one currency keeps the other
+  price stored (just hidden).
+- **Categories:** add, rename, move up/down, delete (its items are deleted with it, the confirmation
+  window says how many). Up to 50 per restaurant. Moving renumbers 1..n inside one statement, so
+  duplicates or gaps in `sort_order` cannot break the order.
+- **Confirmation windows** are our own (`ConfirmDialog`, a native `<dialog>`), never the browser's `confirm()`.
+
 ## Tests
 
 ```

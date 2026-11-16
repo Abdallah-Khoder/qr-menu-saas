@@ -2,17 +2,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const LINKS = [
-  { href: '/admin', label: 'نظرة عامة' },
-  { href: '/admin/restaurants', label: 'المطاعم' },
-  { href: '/admin/invites', label: 'الدعوات' },
-];
+export type NavItem = { href: string; label: string };
 
-export default function NavLinks() {
+export default function NavLinks({ links }: { links: NavItem[] }) {
   const pathname = usePathname();
   return (
     <>
-      {LINKS.map((l) => (
+      {links.map((l) => (
         <Link
           key={l.href}
           href={l.href}

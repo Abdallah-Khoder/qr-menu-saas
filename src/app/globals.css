@@ -125,3 +125,40 @@ button, input { font: inherit; color: inherit; }
 .qr-box { margin: 8px 0 20px; }
 .qr { width: 220px; max-width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 .qr svg { display: block; width: 100%; height: auto; }
+
+/* No scrollbar on the side of the page (the page still scrolls with finger, wheel and keys) */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
+
+/* Our own confirmation window */
+dialog.confirm {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink);
+  padding: 22px; width: min(92vw, 420px); box-shadow: 0 20px 50px rgba(60, 35, 10, .35);
+}
+dialog.confirm::backdrop { background: rgba(43, 33, 24, .5); }
+dialog.confirm h2 { margin: 0 0 8px; font-size: 1.15rem; }
+dialog.confirm p { margin: 0 0 18px; color: var(--muted); }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-start; }
+.confirm-actions .btn { width: auto; padding: 10px 20px; }
+.btn.danger-solid { background: var(--danger); }
+.btn.danger-solid:hover { background: #8f1d17; }
+
+/* Forms inside panels */
+.panel .field input, .panel .field select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); font-size: 1rem;
+}
+.form-grid { display: grid; gap: 0 16px; grid-template-columns: 1fr; }
+@media (min-width: 721px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+.panel .btn:not(.ghost) { width: auto; padding: 12px 26px; }
+.choice { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; padding: 0; border: 0; }
+.choice legend { font-size: .9rem; color: var(--muted); margin-bottom: 4px; padding: 0; }
+.choice label { border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; background: var(--bg); cursor: pointer; }
+.choice label:has(input:checked) { border-color: var(--brand); outline: 1px solid var(--brand); font-weight: 700; }
+.choice input { margin-inline-end: 6px; accent-color: var(--brand); }
+.qr-row { display: flex; gap: 24px; flex-wrap: wrap; }
+.qr-row .qr-box { margin: 0; }
+.link-line { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.link-line small { color: var(--muted); }
+.cat-edit { display: flex; gap: 8px; flex: 1 1 220px; }
+.cat-edit input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
