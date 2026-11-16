@@ -4,16 +4,16 @@ import { hasLetterOrDigit } from './slugify';
 
 // Every function here takes the OWNER's id (from his login), never a restaurant id from the request.
 // The restaurant is found inside the same SQL statement, so no query can reach another restaurant.
-const MY_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1)`;
+export const MY_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1)`;
 // For every WRITE: a suspended restaurant matches nothing, so the statement changes nothing.
-const MY_ACTIVE_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active')`;
+export const MY_ACTIVE_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active')`;
 
 export const MAX_CATEGORIES = 50;
 export const NAME_MAX = 80;
 
 export type Currencies = 'USD' | 'LBP' | 'BOTH';
 export type Result = { ok: true } | { ok: false; status: number; error: string };
-const fail = (status: number, error: string): Result => ({ ok: false, status, error });
+export const fail = (status: number, error: string): Result => ({ ok: false, status, error });
 
 export type OwnerRestaurant = {
   id: string; name: string; public_slug: string; status: 'active' | 'suspended';
@@ -35,7 +35,7 @@ export const SUSPENDED_MESSAGE = 'تم إيقاف مطعمك من الإدارة
  * A write changed nothing: say why. A suspended restaurant gets a clear 403, anything else keeps the
  * answer the caller had (404 / 409). Only runs on the failure path, so normal requests pay nothing.
  */
-async function explain(db: Db, ownerId: string, otherwise: Result): Promise<Result> {
+export async function explain(db: Db, ownerId: string, otherwise: Result): Promise<Result> {
   const res = await db.query(`SELECT status FROM restaurants WHERE owner_id = $1`, [ownerId]);
   return res.rows[0]?.status === 'suspended' ? fail(403, SUSPENDED_MESSAGE) : otherwise;
 }
