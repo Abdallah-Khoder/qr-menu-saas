@@ -25,9 +25,13 @@ export function transliterate(name: string): string {
     .replace(/-+$/g, '');
 }
 
-/** True if the name has at least one letter or digit (a name of only symbols or emoji is refused). */
+/**
+ * True if the name has at least one letter or digit in ANY language (Arabic, Armenian, Chinese...).
+ * A name of only symbols or emoji is refused. (Checked on the original name, not on the Latin
+ * version, otherwise a real name in another script would be refused because it cannot be transliterated.)
+ */
 export function hasLetterOrDigit(name: string): boolean {
-  return transliterate(name) !== '';
+  return /[\p{L}\p{N}]/u.test(name);
 }
 
 /** The readable part of the link; 'menu' only as a last safety net (names without letters are refused earlier). */

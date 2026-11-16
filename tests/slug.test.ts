@@ -60,6 +60,10 @@ describe('hasLetterOrDigit', () => {
     expect(hasLetterOrDigit('🍕 م')).toBe(true);
     expect(hasLetterOrDigit('٣')).toBe(true);
     expect(hasLetterOrDigit('A')).toBe(true);
+    // real names in other scripts (cannot be written with Latin letters here) are still names
+    expect(hasLetterOrDigit('Արամ')).toBe(true);
+    expect(hasLetterOrDigit('東京')).toBe(true);
+    expect(slugify('東京')).toBe('menu'); // link falls back, the shown name stays as typed
   });
 });
 
@@ -67,6 +71,8 @@ describe('qrSvg', () => {
   test('makes an SVG picture and never different for the same link', async () => {
     const svg = await qrSvg('https://example.com/m/shaar-crepe-k3x9qp7vtz');
     expect(svg).toContain('<svg');
+    // the first dark square starts 4 squares from the edge (quiet zone), not 2
+    expect(svg).toMatch(/stroke="#000000" d="M4 4\.5h/);
     expect(await qrSvg('https://example.com/m/shaar-crepe-k3x9qp7vtz')).toBe(svg);
     expect(await qrSvg('https://example.com/m/other-k3x9qp7vtz')).not.toBe(svg);
   });
