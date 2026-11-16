@@ -80,7 +80,7 @@ describe('parseMapUrl', () => {
     for (const good of [
       'https://maps.app.goo.gl/abc123', 'https://www.google.com/maps/place/Shaar+Crepe/@33.89,35.5,17z', 'https://google.com.lb/maps?q=33.89,35.5',
       'https://maps.google.com/?q=33.89,35.5', 'https://goo.gl/maps/xyz', 'https://waze.com/ul?ll=33.89,35.5', 'https://ul.waze.com/ul?ll=1,2',
-      'https://maps.apple.com/?ll=33.89,35.5', 'https://www.google.ch/maps?q=47.37,8.54', 'https://www.google.co.jp/maps/place/x',
+      'https://maps.apple.com/?ll=33.89,35.5'
     ]) {
       expect(parseMapUrl(good).ok, good).toBe(true);
     }
@@ -90,7 +90,7 @@ describe('parseMapUrl', () => {
     for (const bad of [
       'http://maps.google.com/x', 'javascript:alert(1)', 'https://user:pw@maps.google.com', 'not a url', 'https://localhost/x',
       'https://evil.com', 'https://evil.com/maps', 'https://www.google.com/url?q=https://evil.com', 'https://www.google.com/search?q=x',
-      'https://maps.google.com.evil.com/x', 'https://goo.gl/abc', 'https://google.com.evil.com/maps', 'https://notwaze.com/ul', 'https://google.abc.de/maps', 'https://www.google.ev.il/maps', 'https://google.xyz/maps',
+      'https://maps.google.com.evil.com/x', 'https://goo.gl/abc', 'https://google.com.evil.com/maps', 'https://notwaze.com/ul', 'https://google.abc.de/maps', 'https://www.google.ch/maps?q=1,2', 'https://www.google.ev.il/maps', 'https://google.xyz/maps',
       'https://maps.app.goo.gl.evil.com/x', 'https://maps.app.goo.gl/' + 'a'.repeat(600),
     ]) {
       expect(parseMapUrl(bad).ok, bad).toBe(false);

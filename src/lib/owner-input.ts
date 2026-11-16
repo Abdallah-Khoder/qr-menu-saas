@@ -23,14 +23,9 @@ export function parsePhone(input: string): Parsed<string | null> {
 
 const MAP_BAD = { ok: false as const, error: 'رابط الخريطة غير صالح. استخدم رابطًا من خرائط غوغل أو Waze أو خرائط أبل' };
 
-const GOOGLE_DOMAINS = new Set([
-  'google.com', 'google.com.lb', 'google.fr', 'google.de', 'google.it', 'google.es', 'google.nl', 'google.ca', 'google.co.uk',
-  'google.ae', 'google.com.sa', 'google.com.eg', 'google.com.tr', 'google.com.au', 'google.co.in', 'google.com.br', 'google.ru',
-  'google.ch', 'google.co.jp', 'google.at', 'google.be', 'google.se', 'google.pl', 'google.gr', 'google.com.cy', 'google.jo',
-  'google.com.kw', 'google.com.qa', 'google.com.om', 'google.com.bh', 'google.iq', 'google.dz', 'google.co.ma', 'google.tn',
-  // (Not every Google domain in the world is here, only the common ones. Other Google links still work through
-  // maps.app.goo.gl, the "Share" link of Google Maps. Never use a pattern here: it would also match google.xx.yy of strangers.)
-]);
+// Lebanon only: a restaurant here shares a Google Maps link from google.com, google.com.lb or "Share" (maps.app.goo.gl).
+// An explicit list, never a pattern: a pattern would also match google.xx.yy owned by strangers.
+const GOOGLE_DOMAINS = new Set(['google.com', 'google.com.lb']);
 
 /** Is this https address a real map page (and not just any website)? */
 function isMapAddress(url: URL): boolean {
