@@ -51,7 +51,7 @@ export default function SignupForm({ token, email }: { token: string; email: str
       </label>
       {name.trim() && (
         <p className="note">
-          رابط قائمتك سيبدأ بـ: <bdi dir="ltr">/m/{slugify(name)}-…</bdi>
+          رابط قائمتك سيبدأ بـ <span dir="ltr" style={{ display: 'inline-block' }}>/m/{slugify(name)}-</span> ثم 10 أحرف عشوائية
         </p>
       )}
       <label className="field">
