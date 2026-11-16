@@ -37,31 +37,63 @@ describe('parsePhone', () => {
 });
 
 describe('social links', () => {
-  it('Instagram: account name or the real link, nothing else', () => {
+  it('Instagram: account name or a profile link, rebuilt in one safe shape', () => {
     expect(parseInstagram('@shaar.crepe')).toEqual({ ok: true, value: 'https://www.instagram.com/shaar.crepe' });
     expect(parseInstagram('shaar_crepe')).toEqual({ ok: true, value: 'https://www.instagram.com/shaar_crepe' });
-    expect(parseInstagram('https://www.instagram.com/shaar.crepe/?hl=en')).toMatchObject({ ok: true });
+    // tracking parameters and the trailing slash are dropped
+    expect(parseInstagram('https://instagram.com/shaar.crepe/?igsh=abc&hl=en')).toEqual({ ok: true, value: 'https://www.instagram.com/shaar.crepe' });
     expect(parseInstagram('  ')).toEqual({ ok: true, value: null });
-    for (const bad of ['https://evil.com/instagram.com', 'https://instagram.com.evil.com/x', 'http://instagram.com/x', 'javascript:alert(1)', 'https://facebook.com/x', 'a b', 'x'.repeat(31)]) {
-      expect(parseInstagram(bad).ok).toBe(false);
+  });
+  it('Instagram: refuses other sites, posts, login pages and redirect pages', () => {
+    for (const bad of [
+      'https://evil.com/instagram.com', 'https://instagram.com.evil.com/x', 'http://instagram.com/x', 'javascript:alert(1)',
+      'https://facebook.com/x', 'a b', 'x'.repeat(31), 'https://www.instagram.com/p/Cabc123/', 'https://www.instagram.com/accounts/login',
+      'https://l.instagram.com/?u=https%3A%2F%2Fevil.com', 'https://www.instagram.com/a/b', 'https://www.instagram.com/', 'explore', '@p',
+      'https://user:pw@instagram.com/x',
+    ]) {
+      expect(parseInstagram(bad).ok, bad).toBe(false);
     }
   });
-  it('Facebook: page name or the real link, nothing else', () => {
+  it('Facebook: page name or a page link, rebuilt in one safe shape', () => {
     expect(parseFacebook('shaarcrepe')).toEqual({ ok: true, value: 'https://www.facebook.com/shaarcrepe' });
-    expect(parseFacebook('https://fb.me/shaarcrepe')).toMatchObject({ ok: true });
-    expect(parseFacebook('https://m.facebook.com/shaarcrepe')).toMatchObject({ ok: true });
-    for (const bad of ['https://instagram.com/x', 'https://facebook.com.evil.com', 'http://facebook.com/x', 'abc']) {
-      expect(parseFacebook(bad).ok).toBe(false);
+    expect(parseFacebook('https://fb.me/shaarcrepe')).toEqual({ ok: true, value: 'https://www.facebook.com/shaarcrepe' });
+    expect(parseFacebook('https://m.facebook.com/shaarcrepe/?ref=x')).toEqual({ ok: true, value: 'https://www.facebook.com/shaarcrepe' });
+    expect(parseFacebook('https://www.facebook.com/profile.php?id=100012345678901&sk=about')).toEqual({ ok: true, value: 'https://www.facebook.com/profile.php?id=100012345678901' });
+    expect(parseFacebook('https://www.facebook.com/p/Shaar-Crepe-100012345678901/')).toEqual({ ok: true, value: 'https://www.facebook.com/p/Shaar-Crepe-100012345678901' });
+    expect(parseFacebook('https://www.facebook.com/people/Shaar-Crepe/100012345678901/')).toEqual({ ok: true, value: 'https://www.facebook.com/people/Shaar-Crepe/100012345678901' });
+  });
+  it('Facebook: refuses other sites and the redirect, share and login pages', () => {
+    for (const bad of [
+      'https://instagram.com/x', 'https://facebook.com.evil.com', 'http://facebook.com/x', 'abc',
+      'https://www.facebook.com/l.php?u=https%3A%2F%2Fevil.com', 'https://www.facebook.com/sharer/sharer.php?u=x',
+      'https://www.facebook.com/login.php', 'https://l.facebook.com/l.php?u=x', 'https://www.facebook.com/profile.php?id=abc',
+      'https://www.facebook.com/profile.php', 'https://www.facebook.com/dialog/share', 'l.php', 'https://www.facebook.com/',
+      'https://www.facebook.com/' + 'م'.repeat(60),
+    ]) {
+      expect(parseFacebook(bad).ok, bad).toBe(false);
     }
   });
 });
 
 describe('parseMapUrl', () => {
-  it('accepts https links only', () => {
-    expect(parseMapUrl('https://maps.app.goo.gl/abc123')).toEqual({ ok: true, value: 'https://maps.app.goo.gl/abc123' });
+  it('accepts real map pages only', () => {
+    for (const good of [
+      'https://maps.app.goo.gl/abc123', 'https://www.google.com/maps/place/Shaar+Crepe/@33.89,35.5,17z', 'https://google.com.lb/maps?q=33.89,35.5',
+      'https://maps.google.com/?q=33.89,35.5', 'https://goo.gl/maps/xyz', 'https://waze.com/ul?ll=33.89,35.5', 'https://ul.waze.com/ul?ll=1,2',
+      'https://maps.apple.com/?ll=33.89,35.5',
+    ]) {
+      expect(parseMapUrl(good).ok, good).toBe(true);
+    }
     expect(parseMapUrl('')).toEqual({ ok: true, value: null });
-    for (const bad of ['http://maps.google.com/x', 'javascript:alert(1)', 'https://user:pw@maps.google.com', 'not a url', 'https://localhost/x', 'https://' + 'a'.repeat(600) + '.com']) {
-      expect(parseMapUrl(bad).ok).toBe(false);
+  });
+  it('refuses everything else: other sites, redirects, tricks', () => {
+    for (const bad of [
+      'http://maps.google.com/x', 'javascript:alert(1)', 'https://user:pw@maps.google.com', 'not a url', 'https://localhost/x',
+      'https://evil.com', 'https://evil.com/maps', 'https://www.google.com/url?q=https://evil.com', 'https://www.google.com/search?q=x',
+      'https://maps.google.com.evil.com/x', 'https://goo.gl/abc', 'https://google.com.evil.com/maps', 'https://notwaze.com/ul',
+      'https://maps.app.goo.gl.evil.com/x', 'https://maps.app.goo.gl/' + 'a'.repeat(600),
+    ]) {
+      expect(parseMapUrl(bad).ok, bad).toBe(false);
     }
   });
 });
