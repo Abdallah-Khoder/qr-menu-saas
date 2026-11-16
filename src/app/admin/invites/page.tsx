@@ -38,7 +38,7 @@ export default async function InvitesPage() {
                 </div>
                 <span className={`badge ${STATUS[i.status].cls}`}>{STATUS[i.status].label}</span>
                 {i.status === 'open' && (
-                  <RowAction url={`/api/admin/invites/${i.id}/revoke`} label="إلغاء" confirm="هل تريد إلغاء هذه الدعوة؟" />
+                  <RowAction url={`/api/admin/invites/${i.id}/revoke`} label="إلغاء" confirm="هل تريد إلغاء هذه الدعوة؟ لن يعمل رابطها بعد ذلك." confirmLabel="نعم، ألغِها" />
                 )}
               </li>
             ))}

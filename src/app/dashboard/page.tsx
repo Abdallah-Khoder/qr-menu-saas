@@ -1,40 +1,41 @@
 import CopyField from '@/components/CopyField';
-import LogoutButton from '@/components/LogoutButton';
 import { appUrl } from '@/lib/app-url';
 import { requireOwner } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
+import { getOwnerRestaurant } from '@/lib/owner-menu';
 import { qrSvg } from '@/lib/qr';
 
-export const metadata = { title: 'لوحة المطعم' };
+export default async function OwnerHome() {
+  const user = await requireOwner(); // the page that reads data checks by itself
+  const restaurant = await getOwnerRestaurant(getDb(), user.id); // only THIS owner's restaurant
+  if (!restaurant) return <p className="note">لا يوجد مطعم مرتبط بحسابك. تواصل مع الإدارة.</p>;
 
-export default async function OwnerDashboard() {
-  const user = await requireOwner();
-  // Only the restaurant of THIS owner: the query is filtered by his id.
-  const res = await getDb().query(`SELECT name, public_slug FROM restaurants WHERE owner_id = $1`, [user.id]);
-  const restaurant = res.rows[0] as { name: string; public_slug: string } | undefined;
   const base = appUrl();
-  const menuLink = restaurant ? `${base}/m/${restaurant.public_slug}` : null;
-  const qr = menuLink ? await qrSvg(menuLink) : null;
+  const dashboardLink = `${base}/dashboard`;
+  const menuLink = `${base}/m/${restaurant.public_slug}`;
+  const [dashboardQr, menuQr] = await Promise.all([qrSvg(dashboardLink), qrSvg(menuLink)]);
 
   return (
-    <main className="auth-wrap">
-      <div className="auth-card wide">
-        <h1 className="logo">أهلًا بك</h1>
-        <p className="sub" dir="ltr">{user.email}</p>
-        {restaurant && menuLink && qr && (
-          <>
-            <h2>{restaurant.name}</h2>
-            <CopyField label="رابط لوحة التحكم (احفظه لتدخل منه)" value={`${base}/dashboard`} />
-            <CopyField label="رابط قائمتك للزبائن (ضعه على إنستغرام وواتساب)" value={menuLink} />
-            <div className="qr-box">
-              <span className="copy-label">رمز QR لقائمتك (اطبعه وضعه على الطاولات)</span>
-              <div className="qr" role="img" aria-label="رمز QR لرابط القائمة" dangerouslySetInnerHTML={{ __html: qr }} />
-            </div>
-          </>
-        )}
-        <p className="note">إعداد القائمة (الأصناف والأسعار) سيتوفّر في الخطوات القادمة.</p>
-        <LogoutButton />
-      </div>
-    </main>
+    <>
+      <h1>{restaurant.name}</h1>
+      <section className="panel">
+        <h2>قائمة الزبائن</h2>
+        <p className="note">هذا الرابط ورمز QR هما ما يراه زبائنك. ضع الرمز على الطاولات والرابط على إنستغرام وواتساب.</p>
+        <CopyField label="رابط قائمتك للزبائن" value={menuLink} />
+        <div className="qr-box">
+          <span className="copy-label">رمز QR لقائمتك (اطبعه وضعه على الطاولات)</span>
+          <div className="qr" role="img" aria-label="رمز QR لرابط القائمة" dangerouslySetInnerHTML={{ __html: menuQr }} />
+        </div>
+      </section>
+      <section className="panel">
+        <h2>لوحة التحكم</h2>
+        <p className="note">للدخول إلى لوحتك بسرعة. تحتاج إلى بريدك وكلمة المرور في كل الأحوال.</p>
+        <CopyField label="رابط لوحة التحكم (احفظه لتدخل منه)" value={dashboardLink} />
+        <div className="qr-box">
+          <span className="copy-label">رمز QR للوحة التحكم</span>
+          <div className="qr" role="img" aria-label="رمز QR لرابط لوحة التحكم" dangerouslySetInnerHTML={{ __html: dashboardQr }} />
+        </div>
+      </section>
+    </>
   );
 }

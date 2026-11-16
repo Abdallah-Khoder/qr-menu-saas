@@ -3,6 +3,12 @@ import NavLinks from '@/components/NavLinks';
 import LogoutButton from '@/components/LogoutButton';
 import { requireSuperAdmin } from '@/lib/current-user';
 
+const LINKS = [
+  { href: '/admin', label: 'نظرة عامة' },
+  { href: '/admin/restaurants', label: 'المطاعم' },
+  { href: '/admin/invites', label: 'الدعوات' },
+];
+
 export const metadata = { title: 'لوحة الإدارة' };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="shell">
       <aside className="side">
         <Brand />
-        <NavLinks />
+        <NavLinks links={LINKS} />
         <div className="spacer" />
         <div className="who" dir="ltr">{user.email}</div>
         <LogoutButton />

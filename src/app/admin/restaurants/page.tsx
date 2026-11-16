@@ -1,4 +1,6 @@
+import CopyField from '@/components/CopyField';
 import RowAction from '@/components/RowAction';
+import { appUrl } from '@/lib/app-url';
 import { requireSuperAdmin } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
 import { formatDateTime } from '@/lib/format';
@@ -9,6 +11,7 @@ export const metadata = { title: 'المطاعم' };
 export default async function RestaurantsPage() {
   await requireSuperAdmin(); // the page that reads data checks by itself
   const restaurants = await listRestaurants(getDb());
+  const base = appUrl();
   return (
     <>
       <h1>المطاعم</h1>
@@ -24,8 +27,8 @@ export default async function RestaurantsPage() {
                   <div className="row-main">
                     <b>{r.name}</b>
                     <small dir="ltr" className="email">{r.owner_email}</small>
-                    <small dir="ltr">{r.public_slug}</small>
                     <small>أُنشئ {formatDateTime(r.created_at)}</small>
+                    <CopyField label="الرابط العام للقائمة" value={`${base}/m/${r.public_slug}`} />
                   </div>
                   <span className={`badge ${suspended ? 'warn' : 'ok'}`}>{suspended ? 'موقوف' : 'نشط'}</span>
                   <div className="actions">
@@ -39,6 +42,7 @@ export default async function RestaurantsPage() {
                       body={{ withAccount: false }}
                       label="حذف المطعم"
                       confirm={`سيُحذف مطعم «${r.name}» وقائمته بالكامل، ويبقى حساب صاحبه. لا يمكن التراجع. هل تريد المتابعة؟`}
+                      confirmLabel="نعم، احذف"
                       danger
                     />
                     <RowAction
@@ -46,6 +50,7 @@ export default async function RestaurantsPage() {
                       body={{ withAccount: true }}
                       label="حذف الحساب"
                       confirm={`سيُحذف حساب ${r.owner_email} ومطعمه وقائمته بالكامل. لا يمكن التراجع. هل تريد المتابعة؟`}
+                      confirmLabel="نعم، احذف"
                       danger
                     />
                   </div>
