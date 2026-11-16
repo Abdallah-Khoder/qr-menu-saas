@@ -162,3 +162,8 @@ dialog.confirm p { margin: 0 0 18px; color: var(--muted); }
 .link-line small { color: var(--muted); }
 .cat-edit { display: flex; gap: 8px; flex: 1 1 220px; }
 .cat-edit input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+
+/* Suspended restaurant */
+.banner { background: #fdecea; color: var(--danger); border: 1px solid var(--danger); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; font-weight: 700; }
+fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.plain:disabled { opacity: .6; }

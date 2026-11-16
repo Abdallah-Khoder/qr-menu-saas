@@ -6,10 +6,10 @@ import ConfirmDialog from './ConfirmDialog';
 
 /** One small button that calls an endpoint, optionally after a confirmation window of our own. */
 export default function RowAction({
-  url, body, label, ariaLabel, confirm, confirmLabel, danger = false,
+  url, body, label, ariaLabel, confirm, confirmLabel, danger = false, disabled = false,
 }: {
   url: string; body?: unknown; label: string; ariaLabel?: string;
-  confirm?: string; confirmLabel?: string; danger?: boolean;
+  confirm?: string; confirmLabel?: string; danger?: boolean; disabled?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -32,7 +32,7 @@ export default function RowAction({
         className={`btn ghost small${danger ? ' danger' : ''}`}
         aria-label={ariaLabel}
         onClick={() => (confirm ? setAsking(true) : run())}
-        disabled={busy}
+        disabled={busy || disabled}
       >
         {label}
       </button>

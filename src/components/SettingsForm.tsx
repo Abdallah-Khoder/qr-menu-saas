@@ -9,7 +9,7 @@ type R = {
   instagram_url: string | null; facebook_url: string | null;
 };
 
-export default function SettingsForm({ restaurant }: { restaurant: R }) {
+export default function SettingsForm({ restaurant, disabled = false }: { restaurant: R; disabled?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState('');
   const [done, setDone] = useState('');
@@ -35,6 +35,7 @@ export default function SettingsForm({ restaurant }: { restaurant: R }) {
 
   return (
     <form onSubmit={onSubmit} method="post" action="/api/owner/settings">
+      <fieldset className="plain" disabled={disabled}>
       <label className="field">
         <span>اسم المطعم</span>
         <input name="name" defaultValue={restaurant.name} maxLength={80} required />
@@ -74,6 +75,7 @@ export default function SettingsForm({ restaurant }: { restaurant: R }) {
       {error && <p className="error" role="alert">{error}</p>}
       {done && <p className="success" role="status">{done}</p>}
       <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}</button>
+      </fieldset>
     </form>
   );
 }

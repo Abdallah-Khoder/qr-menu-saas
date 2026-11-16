@@ -5,6 +5,8 @@ import { hasLetterOrDigit } from './slugify';
 // Every function here takes the OWNER's id (from his login), never a restaurant id from the request.
 // The restaurant is found inside the same SQL statement, so no query can reach another restaurant.
 const MY_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1)`;
+// For every WRITE: a suspended restaurant matches nothing, so the statement changes nothing.
+const MY_ACTIVE_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active')`;
 
 export const MAX_CATEGORIES = 50;
 export const NAME_MAX = 80;
@@ -25,6 +27,17 @@ export async function getOwnerRestaurant(db: Db, ownerId: string): Promise<Owner
     [ownerId],
   );
   return res.rows[0] ?? null;
+}
+
+export const SUSPENDED_MESSAGE = 'تم إيقاف مطعمك من الإدارة، فلا يمكنك التعديل حتى إعادة التفعيل.';
+
+/**
+ * A write changed nothing: say why. A suspended restaurant gets a clear 403, anything else keeps the
+ * answer the caller had (404 / 409). Only runs on the failure path, so normal requests pay nothing.
+ */
+async function explain(db: Db, ownerId: string, otherwise: Result): Promise<Result> {
+  const res = await db.query(`SELECT status FROM restaurants WHERE owner_id = $1`, [ownerId]);
+  return res.rows[0]?.status === 'suspended' ? fail(403, SUSPENDED_MESSAGE) : otherwise;
 }
 
 function checkName(raw: string, what: string): { ok: true; name: string } | { ok: false; error: string } {
@@ -59,7 +72,7 @@ export async function saveSettings(
   if (!facebook.ok) return fail(400, facebook.error);
 
   const res = await db.query(
-    `WITH r AS (SELECT id FROM restaurants WHERE owner_id = $1),
+    `WITH r AS (SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active'),
      missing AS (
        SELECT (
          SELECT count(*) FROM items i
@@ -83,7 +96,7 @@ export async function saveSettings(
     [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value],
   );
   const row = res.rows[0];
-  if (!row?.restaurant_id) return fail(404, 'المطعم غير موجود');
+  if (!row?.restaurant_id) return explain(db, ownerId, fail(404, 'المطعم غير موجود'));
   if (row.missing > 0) {
     return fail(409, `لا يمكن اختيار هذه العملة: يوجد ${row.missing} منتج أو حجم بلا سعر بها. أكمل الأسعار أولًا.`);
   }
@@ -114,30 +127,32 @@ export async function createCategory(db: Db, ownerId: string, nameInput: string)
     `INSERT INTO categories (restaurant_id, name, sort_order)
      SELECT r.id, $2, COALESCE((SELECT MAX(sort_order) + 1 FROM categories WHERE restaurant_id = r.id), 0)
      FROM restaurants r
-     WHERE r.owner_id = $1 AND (SELECT count(*) FROM categories WHERE restaurant_id = r.id) < $3
+     WHERE r.owner_id = $1 AND r.status = 'active' AND (SELECT count(*) FROM categories WHERE restaurant_id = r.id) < $3
      RETURNING id`,
     [ownerId, name.name, MAX_CATEGORIES],
   );
-  return res.rows.length > 0 ? { ok: true } : fail(409, `لا يمكن إضافة المزيد (الحد الأقصى ${MAX_CATEGORIES} قسمًا)`);
+  return res.rows.length > 0
+    ? { ok: true }
+    : explain(db, ownerId, fail(409, `لا يمكن إضافة المزيد (الحد الأقصى ${MAX_CATEGORIES} قسمًا)`));
 }
 
 export async function renameCategory(db: Db, ownerId: string, id: string, nameInput: string): Promise<Result> {
   const name = checkName(nameInput, 'اسم القسم');
   if (!name.ok) return fail(400, name.error);
   const res = await db.query(
-    `UPDATE categories SET name = $3 WHERE id = $2 AND restaurant_id = ${MY_RESTAURANT} RETURNING id`,
+    `UPDATE categories SET name = $3 WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} RETURNING id`,
     [ownerId, id, name.name],
   );
-  return res.rows.length > 0 ? { ok: true } : fail(404, 'القسم غير موجود');
+  return res.rows.length > 0 ? { ok: true } : explain(db, ownerId, fail(404, 'القسم غير موجود'));
 }
 
 /** Deletes the category AND its items (the database cascades). */
 export async function deleteCategory(db: Db, ownerId: string, id: string): Promise<Result> {
   const res = await db.query(
-    `DELETE FROM categories WHERE id = $2 AND restaurant_id = ${MY_RESTAURANT} RETURNING id`,
+    `DELETE FROM categories WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} RETURNING id`,
     [ownerId, id],
   );
-  return res.rows.length > 0 ? { ok: true } : fail(404, 'القسم غير موجود');
+  return res.rows.length > 0 ? { ok: true } : explain(db, ownerId, fail(404, 'القسم غير موجود'));
 }
 
 /**
@@ -149,7 +164,7 @@ export async function moveCategory(db: Db, ownerId: string, id: string, directio
   const res = await db.query(
     `WITH ranked AS (
        SELECT id, row_number() OVER (ORDER BY sort_order, id) AS pos
-       FROM categories WHERE restaurant_id = ${MY_RESTAURANT}
+       FROM categories WHERE restaurant_id = ${MY_ACTIVE_RESTAURANT}
      ),
      me AS (SELECT pos FROM ranked WHERE id = $2),
      target AS (SELECT (SELECT pos FROM me) + CASE WHEN $3::text = 'up' THEN -1 ELSE 1 END AS pos)
@@ -158,7 +173,7 @@ export async function moveCategory(db: Db, ownerId: string, id: string, directio
                            WHEN r.pos = (SELECT pos FROM target) THEN (SELECT pos FROM me)
                            ELSE r.pos END
      FROM ranked r
-     WHERE c.id = r.id AND c.restaurant_id = ${MY_RESTAURANT}
+     WHERE c.id = r.id AND c.restaurant_id = ${MY_ACTIVE_RESTAURANT}
        AND EXISTS (SELECT 1 FROM me)
        AND (SELECT pos FROM target) BETWEEN 1 AND (SELECT count(*) FROM ranked)
      RETURNING c.id`,
@@ -167,5 +182,6 @@ export async function moveCategory(db: Db, ownerId: string, id: string, directio
   if (res.rows.length > 0) return { ok: true };
   // nothing changed: either already at the end, or not his category
   const exists = await db.query(`SELECT 1 FROM categories WHERE id = $2 AND restaurant_id = ${MY_RESTAURANT}`, [ownerId, id]);
-  return exists.rows.length > 0 ? { ok: true } : fail(404, 'القسم غير موجود');
+  if (exists.rows.length === 0) return fail(404, 'القسم غير موجود');
+  return (await explain(db, ownerId, { ok: true }));
 }

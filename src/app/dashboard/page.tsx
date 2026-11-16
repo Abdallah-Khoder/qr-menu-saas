@@ -1,13 +1,12 @@
 import CopyField from '@/components/CopyField';
 import { appUrl } from '@/lib/app-url';
 import { requireOwner } from '@/lib/current-user';
-import { getDb } from '@/lib/db';
-import { getOwnerRestaurant } from '@/lib/owner-menu';
+import { getMyRestaurant } from '@/lib/owner-page';
 import { qrSvg } from '@/lib/qr';
 
 export default async function OwnerHome() {
   const user = await requireOwner(); // the page that reads data checks by itself
-  const restaurant = await getOwnerRestaurant(getDb(), user.id); // only THIS owner's restaurant
+  const restaurant = await getMyRestaurant(user.id); // only THIS owner's restaurant
   if (!restaurant) return <p className="note">لا يوجد مطعم مرتبط بحسابك. تواصل مع الإدارة.</p>;
 
   const base = appUrl();

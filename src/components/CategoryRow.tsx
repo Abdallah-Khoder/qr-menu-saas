@@ -6,7 +6,9 @@ import RowAction from './RowAction';
 
 type Category = { id: string; name: string; item_count: number };
 
-export default function CategoryRow({ category, first, last }: { category: Category; first: boolean; last: boolean }) {
+export default function CategoryRow({
+  category, first, last, disabled = false,
+}: { category: Category; first: boolean; last: boolean; disabled?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
@@ -45,10 +47,10 @@ export default function CategoryRow({ category, first, last }: { category: Categ
       )}
       {!editing && (
         <div className="actions">
-          {!first && <RowAction url={`${url}/move`} body={{ direction: 'up' }} label="↑" ariaLabel="تحريك إلى الأعلى" />}
-          {!last && <RowAction url={`${url}/move`} body={{ direction: 'down' }} label="↓" ariaLabel="تحريك إلى الأسفل" />}
-          <button className="btn ghost small" onClick={() => { setName(category.name); setEditing(true); }}>تعديل الاسم</button>
-          <RowAction url={`${url}/delete`} label="حذف" confirm={warning} confirmLabel="نعم، احذف" danger />
+          {!first && <RowAction url={`${url}/move`} body={{ direction: 'up' }} label="↑" ariaLabel="تحريك إلى الأعلى" disabled={disabled} />}
+          {!last && <RowAction url={`${url}/move`} body={{ direction: 'down' }} label="↓" ariaLabel="تحريك إلى الأسفل" disabled={disabled} />}
+          <button className="btn ghost small" disabled={disabled} onClick={() => { setName(category.name); setEditing(true); }}>تعديل الاسم</button>
+          <RowAction url={`${url}/delete`} label="حذف" confirm={warning} confirmLabel="نعم، احذف" danger disabled={disabled} />
         </div>
       )}
       {error && <span className="error small-text" role="alert">{error}</span>}

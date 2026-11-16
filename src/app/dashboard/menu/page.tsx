@@ -3,19 +3,21 @@ import CategoryRow from '@/components/CategoryRow';
 import { requireOwner } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
 import { MAX_CATEGORIES, listCategories } from '@/lib/owner-menu';
+import { getMyRestaurant } from '@/lib/owner-page';
 
 export const metadata = { title: 'القائمة' };
 
 export default async function MenuPage() {
   const user = await requireOwner();
-  const categories = await listCategories(getDb(), user.id); // only THIS owner's categories
+  const [categories, restaurant] = await Promise.all([listCategories(getDb(), user.id), getMyRestaurant(user.id)]); // only THIS owner's data
+  const suspended = restaurant?.status === 'suspended';
   return (
     <>
       <h1>القائمة</h1>
       <section className="panel">
         <h2>إضافة قسم</h2>
         <p className="note">الأقسام تجمع أصنافك، مثل: مشروبات، سندويشات، حلويات. (حتى {MAX_CATEGORIES} قسمًا)</p>
-        <CategoryForm />
+        <CategoryForm disabled={suspended} />
       </section>
       <section className="panel">
         <h2>الأقسام</h2>
@@ -24,7 +26,7 @@ export default async function MenuPage() {
         ) : (
           <ul className="rows">
             {categories.map((c, i) => (
-              <CategoryRow key={c.id} category={c} first={i === 0} last={i === categories.length - 1} />
+              <CategoryRow key={c.id} category={c} first={i === 0} last={i === categories.length - 1} disabled={suspended} />
             ))}
           </ul>
         )}
