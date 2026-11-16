@@ -105,6 +105,23 @@ Emails go through any SMTP service chosen only by environment variables (see `.e
 Without `SMTP_HOST`, on your computer, the email is printed in the terminal; on the deployed
 site it refuses to run (so secret links never end up in the logs).
 
+## Sign-up (`/signup?token=...`)
+
+The page shows the form only while the invite is valid (not used, not expired, not replaced).
+Every other case (unknown, used, expired, replaced) shows the same message, "الرابط غير صالح", so
+nobody can learn which links exist. The email is taken from the invite and cannot be changed.
+The owner types the restaurant name in any language and a password (8 characters or more).
+
+Creating the account is **one SQL statement**: it uses up the invite, creates the owner (email
+already verified, because the link came to his inbox) and creates his restaurant. There is never a
+half-made account, and two people sending the same link at the same moment cannot both succeed.
+If the email already has an account, nothing is created and the invite is not used up.
+
+The public link is `/m/<readable-part>-<10 random characters>`. Arabic letters in the name are
+written with Latin letters (sound-alike, not translated: `مطعم الشعار` becomes `mtam-alshaar`);
+the restaurant name itself is stored and shown exactly as typed. A name with no usable letters
+(emoji only) gives `menu`. Guessing links is limited to 5 tries per 15 minutes per IP.
+
 ## Tests
 
 ```

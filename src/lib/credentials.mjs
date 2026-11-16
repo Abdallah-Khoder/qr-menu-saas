@@ -4,6 +4,8 @@
 export const EMAIL_MAX = 254;
 export const PASSWORD_MIN = 12;
 export const PASSWORD_MAX = 200;
+// Owners (restaurant staff) get a lighter rule than the super admin, who can see everything.
+export const OWNER_PASSWORD_MIN = 8;
 
 // Same rule the browser applies to <input type="email"> (HTML standard): ASCII letters, digits and
 // a few symbols before the @. If the script accepted more, it could create an account that the
@@ -22,5 +24,12 @@ export function checkNewCredentials(email, password) {
   if (email.length > EMAIL_MAX) return `Email is too long (maximum ${EMAIL_MAX}).`;
   if (password.length < PASSWORD_MIN) return `Password is too short (minimum ${PASSWORD_MIN}).`;
   if (password.length > PASSWORD_MAX) return `Password is too long (maximum ${PASSWORD_MAX}).`;
+  return null;
+}
+
+/** Owner sign-up password rule: returns 'short' / 'long' when not acceptable, otherwise null. */
+export function checkOwnerPassword(password) {
+  if (password.length < OWNER_PASSWORD_MIN) return 'short';
+  if (password.length > PASSWORD_MAX) return 'long';
   return null;
 }

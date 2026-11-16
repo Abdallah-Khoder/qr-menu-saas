@@ -105,16 +105,18 @@ describe('login', () => {
     const left = await pg.query(`SELECT COUNT(*)::int AS n FROM login_attempts WHERE key = 'email:boss@example.com'`);
     expect((left.rows[0] as { n: number }).n).toBe(0);
   });
-  it('20 guesses sent at the same moment: only 5 are checked, the rest are refused', async () => {
-    await pg.query('DELETE FROM login_attempts');
-    const results = await Promise.all(
-      Array.from({ length: 20 }, (_, i) => login(pg, 'boss@example.com', `guess-${i}`, '10.0.0.1')),
-    );
-    expect(results.filter((r) => !r.ok && r.reason === 'invalid')).toHaveLength(5);
-    expect(results.filter((r) => !r.ok && r.reason === 'rate_limited')).toHaveLength(15);
-    // refused requests leave nothing behind, so they cannot extend the block
-    const rows = await pg.query(`SELECT COUNT(*)::int AS n FROM login_attempts WHERE key = 'email:boss@example.com'`);
-    expect((rows.rows[0] as { n: number }).n).toBe(5);
+  it('20 guesses sent at the same moment: EXACTLY 5 are checked, the rest are refused (10 rounds, it used to be flaky)', async () => {
+    for (let round = 0; round < 10; round++) {
+      await pg.query('DELETE FROM login_attempts');
+      const results = await Promise.all(
+        Array.from({ length: 20 }, (_, i) => login(pg, 'boss@example.com', `guess-${i}`, '10.0.0.1')),
+      );
+      expect(results.filter((r) => !r.ok && r.reason === 'invalid')).toHaveLength(5);
+      expect(results.filter((r) => !r.ok && r.reason === 'rate_limited')).toHaveLength(15);
+      // refused requests leave nothing behind, so they cannot extend the block
+      const rows = await pg.query(`SELECT COUNT(*)::int AS n FROM login_attempts WHERE key = 'email:boss@example.com'`);
+      expect((rows.rows[0] as { n: number }).n).toBe(5);
+    }
   });
   it('a successful login does not leave a counted attempt for the IP', async () => {
     await pg.query('DELETE FROM login_attempts');
