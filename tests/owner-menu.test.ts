@@ -90,7 +90,7 @@ describe('parseMapUrl', () => {
     for (const bad of [
       'http://maps.google.com/x', 'javascript:alert(1)', 'https://user:pw@maps.google.com', 'not a url', 'https://localhost/x',
       'https://evil.com', 'https://evil.com/maps', 'https://www.google.com/url?q=https://evil.com', 'https://www.google.com/search?q=x',
-      'https://maps.google.com.evil.com/x', 'https://goo.gl/abc', 'https://google.com.evil.com/maps', 'https://notwaze.com/ul',
+      'https://maps.google.com.evil.com/x', 'https://goo.gl/abc', 'https://google.com.evil.com/maps', 'https://notwaze.com/ul', 'https://google.abc.de/maps', 'https://www.google.ev.il/maps', 'https://google.xyz/maps',
       'https://maps.app.goo.gl.evil.com/x', 'https://maps.app.goo.gl/' + 'a'.repeat(600),
     ]) {
       expect(parseMapUrl(bad).ok, bad).toBe(false);

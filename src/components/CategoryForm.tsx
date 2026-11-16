@@ -26,7 +26,7 @@ export default function CategoryForm() {
     <form onSubmit={onSubmit} method="post" action="/api/owner/categories" className="inline-form">
       <label className="field grow">
         <span>اسم القسم</span>
-        <input name="name" maxLength={80} required autoComplete="off" />
+        <input name="name" maxLength={80} required autoComplete="off" disabled={busy} />
       </label>
       <button className="btn" disabled={busy || !hydrated}>{busy ? 'جارٍ الإضافة...' : 'إضافة'}</button>
       {error && <p className="error" role="alert">{error}</p>}

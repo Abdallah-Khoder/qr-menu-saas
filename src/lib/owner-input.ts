@@ -23,6 +23,11 @@ export function parsePhone(input: string): Parsed<string | null> {
 
 const MAP_BAD = { ok: false as const, error: 'رابط الخريطة غير صالح. استخدم رابطًا من خرائط غوغل أو Waze أو خرائط أبل' };
 
+const GOOGLE_DOMAINS = new Set([
+  'google.com', 'google.com.lb', 'google.fr', 'google.de', 'google.it', 'google.es', 'google.nl', 'google.ca', 'google.co.uk',
+  'google.ae', 'google.com.sa', 'google.com.eg', 'google.com.tr', 'google.com.au', 'google.co.in', 'google.com.br', 'google.ru',
+]);
+
 /** Is this https address a real map page (and not just any website)? */
 function isMapAddress(url: URL): boolean {
   const host = url.hostname.toLowerCase();
@@ -30,8 +35,9 @@ function isMapAddress(url: URL): boolean {
   if (host === 'maps.app.goo.gl' || host === 'maps.google.com' || host === 'maps.apple.com' || host === 'ul.waze.com') return true;
   if (host === 'goo.gl') return path.startsWith('/maps');
   if (host === 'waze.com' || host === 'www.waze.com') return path.startsWith('/ul') || path.startsWith('/live-map');
-  // google.com, google.com.lb, google.fr ... but only its /maps pages
-  if (/^(www\.)?google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host)) return path === '/maps' || path.startsWith('/maps/');
+  // Google's own domains (an explicit list: a pattern would also match someone else's google.xx.yy), /maps pages only
+  const bare = host.replace(/^www\./, '');
+  if (GOOGLE_DOMAINS.has(bare)) return path === '/maps' || path.startsWith('/maps/');
   return false;
 }
 

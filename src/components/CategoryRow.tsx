@@ -33,9 +33,9 @@ export default function CategoryRow({ category, first, last }: { category: Categ
     <li className="row wrap">
       {editing ? (
         <form className="cat-edit" onSubmit={save}>
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" />
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" disabled={busy} />
           <button className="btn small" disabled={busy}>حفظ</button>
-          <button type="button" className="btn ghost small" onClick={() => { setEditing(false); setName(category.name); setError(''); }}>إلغاء</button>
+          <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setEditing(false); setError(''); }}>إلغاء</button>
         </form>
       ) : (
         <div className="row-main">
@@ -47,7 +47,7 @@ export default function CategoryRow({ category, first, last }: { category: Categ
         <div className="actions">
           {!first && <RowAction url={`${url}/move`} body={{ direction: 'up' }} label="↑" ariaLabel="تحريك إلى الأعلى" />}
           {!last && <RowAction url={`${url}/move`} body={{ direction: 'down' }} label="↓" ariaLabel="تحريك إلى الأسفل" />}
-          <button className="btn ghost small" onClick={() => setEditing(true)}>تعديل الاسم</button>
+          <button className="btn ghost small" onClick={() => { setName(category.name); setEditing(true); }}>تعديل الاسم</button>
           <RowAction url={`${url}/delete`} label="حذف" confirm={warning} confirmLabel="نعم، احذف" danger />
         </div>
       )}
