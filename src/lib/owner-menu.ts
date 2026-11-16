@@ -182,6 +182,6 @@ export async function moveCategory(db: Db, ownerId: string, id: string, directio
   if (res.rows.length > 0) return { ok: true };
   // nothing changed: either already at the end, or not his category
   const exists = await db.query(`SELECT 1 FROM categories WHERE id = $2 AND restaurant_id = ${MY_RESTAURANT}`, [ownerId, id]);
-  if (exists.rows.length === 0) return fail(404, 'القسم غير موجود');
-  return (await explain(db, ownerId, { ok: true }));
+  // A suspended owner gets the suspension answer whatever the id (same as rename and delete).
+  return explain(db, ownerId, exists.rows.length === 0 ? fail(404, 'القسم غير موجود') : { ok: true });
 }

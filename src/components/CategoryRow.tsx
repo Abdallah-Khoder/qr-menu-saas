@@ -35,8 +35,8 @@ export default function CategoryRow({
     <li className="row wrap">
       {editing ? (
         <form className="cat-edit" onSubmit={save}>
-          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" disabled={busy} />
-          <button className="btn small" disabled={busy}>حفظ</button>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required aria-label="اسم القسم" disabled={busy || disabled} />
+          <button className="btn small" disabled={busy || disabled}>حفظ</button>
           <button type="button" className="btn ghost small" disabled={busy} onClick={() => { setEditing(false); setError(''); }}>إلغاء</button>
         </form>
       ) : (

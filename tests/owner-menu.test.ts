@@ -305,6 +305,10 @@ describe('a suspended restaurant cannot change anything', () => {
 
   it('suspended and also a wrong category id: still the suspended message (nothing is revealed)', async () => {
     const { pg, a } = await suspended();
-    expect(await deleteCategory(pg, a.ownerId, '11111111-1111-4111-8111-111111111111')).toEqual(refused);
+    const unknown = '11111111-1111-4111-8111-111111111111';
+    expect(await deleteCategory(pg, a.ownerId, unknown)).toEqual(refused);
+    expect(await renameCategory(pg, a.ownerId, unknown, 'x')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, unknown, 'up')).toEqual(refused);
+    expect(await moveCategory(pg, a.ownerId, unknown, 'down')).toEqual(refused);
   });
 });
