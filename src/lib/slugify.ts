@@ -12,9 +12,9 @@ const ARABIC: Record<string, string> = {
 
 export const READABLE_MAX = 49; // 49 + "-" + 10 random = 60 (the database limit)
 
-/** The readable part of the link: lowercase Latin letters, digits and single dashes. */
-export function slugify(name: string): string {
-  const latin = Array.from(name.normalize('NFD'))
+/** The name written with Latin letters and digits only (single dashes). Empty if it has no letter or digit. */
+export function transliterate(name: string): string {
+  return Array.from(name.normalize('NFD'))
     .map((ch) => ARABIC[ch] ?? ch)
     .join('')
     .toLowerCase()
@@ -23,6 +23,15 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, READABLE_MAX)
     .replace(/-+$/g, '');
-  return latin || 'menu';
+}
+
+/** True if the name has at least one letter or digit (a name of only symbols or emoji is refused). */
+export function hasLetterOrDigit(name: string): boolean {
+  return transliterate(name) !== '';
+}
+
+/** The readable part of the link; 'menu' only as a last safety net (names without letters are refused earlier). */
+export function slugify(name: string): string {
+  return transliterate(name) || 'menu';
 }
 

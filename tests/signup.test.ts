@@ -179,6 +179,11 @@ describe('handleSignup', () => {
       expect((await handleSignup(post({ ...good(token), name: '   ' }), pg)).status).toBe(400);
     }
     expect((await handleSignup(post({ ...good(token), name: 'x'.repeat(81) }), pg)).status).toBe(400);
+    for (const name of ['🍕🍔', '!!! ---', '...']) {
+      const out = await handleSignup(post({ ...good(token), name }), pg);
+      expect(out.status).toBe(400);
+      expect(out.body.error).toContain('حرف أو رقم');
+    }
     expect(await count(pg, 'login_attempts')).toBe(0);
     expect((await handleSignup(post(good(token)), pg)).status).toBe(200);
   });

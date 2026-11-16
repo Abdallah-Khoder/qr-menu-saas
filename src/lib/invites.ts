@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Db } from './db';
 import type { Mail, Sender } from './email';
+import { appUrl } from './app-url';
 import { isValidEmail } from './credentials.mjs';
 
 export const INVITE_MINUTES = 20;
@@ -14,9 +15,7 @@ export function hashToken(token: string): string {
 }
 
 export function inviteLink(token: string): string {
-  const base = process.env.APP_URL ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
-  if (!base) throw new Error('APP_URL is not set');
-  return `${base.replace(/\/$/, '')}/signup?token=${token}`;
+  return `${appUrl()}/signup?token=${token}`;
 }
 
 export function inviteMail(email: string, link: string): Mail {

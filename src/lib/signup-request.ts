@@ -5,6 +5,7 @@ import { isJsonRequest } from './json-request';
 import { releaseAttempts, reserveAttempt } from './rate-limit';
 import { createSessionToken } from './session';
 import { signUpOwner } from './signup';
+import { hasLetterOrDigit } from './slugify';
 
 export const NAME_MAX = 80;
 
@@ -38,6 +39,7 @@ export async function handleSignup(request: Request, db: Db): Promise<SignupResp
   const name = parsed.data.name.trim();
   const length = Array.from(name).length;
   if (length < 1 || length > NAME_MAX) return bad(`اسم المطعم مطلوب (بحد أقصى ${NAME_MAX} حرفًا)`);
+  if (!hasLetterOrDigit(name)) return bad('اسم المطعم يجب أن يحتوي على حرف أو رقم واحد على الأقل');
   const passwordProblem = checkOwnerPassword(parsed.data.password);
   if (passwordProblem === 'short') return bad(`كلمة المرور قصيرة جدًا (${OWNER_PASSWORD_MIN} أحرف على الأقل)`);
   if (passwordProblem === 'long') return bad(`كلمة المرور طويلة جدًا (بحد أقصى ${PASSWORD_MAX} حرف)`);

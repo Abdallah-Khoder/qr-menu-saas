@@ -111,3 +111,17 @@ button, input { font: inherit; color: inherit; }
 
 /* Inter turns the x in "k3x9" into a multiplication sign: switch contextual letters off for latin text */
 [dir="ltr"] { font-feature-settings: "calt" 0; }
+
+/* Owner dashboard: copyable links and the QR code */
+.auth-card.wide { max-width: 520px; }
+.copy-field { margin-bottom: 16px; }
+.copy-label { display: block; font-size: .9rem; margin-bottom: 4px; color: var(--muted); }
+.copy-row { display: flex; gap: 8px; }
+.copy-row input {
+  flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); font-size: .9rem;
+}
+.copy-row .btn.ghost { white-space: nowrap; }
+.qr-box { margin: 8px 0 20px; }
+.qr { width: 220px; max-width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.qr svg { display: block; width: 100%; height: auto; }

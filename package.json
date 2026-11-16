@@ -21,6 +21,7 @@
     "next": "^16.4.6",
     "nodemailer": "^10.5.0",
     "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zod": "^4.6.7"
@@ -29,6 +30,7 @@
     "@electric-sql/pglite": "^0.5.16",
     "@types/node": "^26.6.6",
     "@types/nodemailer": "^8.0.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",

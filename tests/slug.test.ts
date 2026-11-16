@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { makeDb, add } from './helpers';
 import { makeSlug, slugify } from '../src/lib/slug';
+import { hasLetterOrDigit } from '../src/lib/slugify';
+import { qrSvg } from '../src/lib/qr';
 
 describe('slugify', () => {
   test('English names become lowercase words joined by dashes', () => {
@@ -47,6 +49,26 @@ describe('slugify', () => {
     expect(out.length).toBeLessThanOrEqual(49);
     expect(out.endsWith('-')).toBe(false);
     expect(slugify('ab '.repeat(40)).length).toBeLessThanOrEqual(49);
+  });
+});
+
+describe('hasLetterOrDigit', () => {
+  test('a name needs at least one letter or digit', () => {
+    expect(hasLetterOrDigit('🍕🍔')).toBe(false);
+    expect(hasLetterOrDigit('---  !!')).toBe(false);
+    expect(hasLetterOrDigit('')).toBe(false);
+    expect(hasLetterOrDigit('🍕 م')).toBe(true);
+    expect(hasLetterOrDigit('٣')).toBe(true);
+    expect(hasLetterOrDigit('A')).toBe(true);
+  });
+});
+
+describe('qrSvg', () => {
+  test('makes an SVG picture and never different for the same link', async () => {
+    const svg = await qrSvg('https://example.com/m/shaar-crepe-k3x9qp7vtz');
+    expect(svg).toContain('<svg');
+    expect(await qrSvg('https://example.com/m/shaar-crepe-k3x9qp7vtz')).toBe(svg);
+    expect(await qrSvg('https://example.com/m/other-k3x9qp7vtz')).not.toBe(svg);
   });
 });
 
