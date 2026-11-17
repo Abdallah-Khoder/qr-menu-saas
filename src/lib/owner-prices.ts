@@ -56,6 +56,11 @@ const MAX_ENTRIES = 2000;
  * Saves the typed prices. ALL of them or none, in ONE statement: every entry must point to an item
  * (or size) of this owner's restaurant that still has no price in the target currency. If even one
  * does not (deleted, already filled, someone else's), nothing is saved and the owner is told to reload.
+ *
+ * Two saves at the same moment: the rows we are about to fill are locked (FOR UPDATE) BEFORE the count is
+ * made. A second save waits, then PostgreSQL re-checks "is the price still empty?" on those rows, so the
+ * count is true and a price filled by the first save is never overwritten, nor half of a batch saved.
+ * (Tested once on a real PostgreSQL with two connections: the in-memory test database has only one.)
  */
 export async function fillPrices(db: Db, ownerId: string, entries: PriceEntry[]): Promise<Result> {
   const restaurant = await getOwnerRestaurant(db, ownerId);
@@ -68,7 +73,7 @@ export async function fillPrices(db: Db, ownerId: string, entries: PriceEntry[])
   const seen = new Set<string>();
   const prices: string[] = [];
   for (const e of entries) {
-    const key = `${e.itemId}|${e.label.trim().toUpperCase()}`;
+    const key = `${e.itemId.toLowerCase()}|${e.label.trim().toUpperCase()}`; // PostgreSQL reads a UUID in any letter case as the same id
     if (seen.has(key)) return explain(db, ownerId, fail(400, 'سعر مكرّر لنفس المنتج'));
     seen.add(key);
     const parsed = target === 'USD' ? parseUsd(e.price) : parseLbp(e.price);
@@ -88,25 +93,33 @@ export async function fillPrices(db: Db, ownerId: string, entries: PriceEntry[])
        JOIN items i ON i.id = inp.item_id AND i.restaurant_id = (SELECT id FROM r)
        WHERE inp.label = '' AND NOT EXISTS (SELECT 1 FROM item_sizes z WHERE z.item_id = i.id)
          AND (((SELECT target FROM r) = 'USD' AND i.price_usd IS NULL) OR ((SELECT target FROM r) = 'LBP' AND i.price_lbp IS NULL))
+       ORDER BY i.id
+       FOR UPDATE OF i
      ),
      size_hits AS (
        SELECT s.id, inp.price FROM inp
        JOIN item_sizes s ON s.item_id = inp.item_id AND s.label = inp.label AND s.restaurant_id = (SELECT id FROM r)
        WHERE inp.label <> ''
          AND (((SELECT target FROM r) = 'USD' AND s.price_usd IS NULL) OR ((SELECT target FROM r) = 'LBP' AND s.price_lbp IS NULL))
+       ORDER BY s.id
+       FOR UPDATE OF s
      ),
      ok AS (SELECT ((SELECT count(*) FROM item_hits) + (SELECT count(*) FROM size_hits)) = cardinality($2::uuid[]) AS good),
      u_items AS (
        UPDATE items i SET
          price_usd = CASE WHEN (SELECT target FROM r) = 'USD' THEN h.price ELSE i.price_usd END,
          price_lbp = CASE WHEN (SELECT target FROM r) = 'LBP' THEN h.price ELSE i.price_lbp END
-       FROM item_hits h WHERE i.id = h.id AND (SELECT good FROM ok) RETURNING i.id
+       FROM item_hits h WHERE i.id = h.id AND (SELECT good FROM ok)
+         AND ((SELECT target FROM r) = 'USD' AND i.price_usd IS NULL OR (SELECT target FROM r) = 'LBP' AND i.price_lbp IS NULL)
+       RETURNING i.id
      ),
      u_sizes AS (
        UPDATE item_sizes s SET
          price_usd = CASE WHEN (SELECT target FROM r) = 'USD' THEN h.price ELSE s.price_usd END,
          price_lbp = CASE WHEN (SELECT target FROM r) = 'LBP' THEN h.price ELSE s.price_lbp END
-       FROM size_hits h WHERE s.id = h.id AND (SELECT good FROM ok) RETURNING s.id
+       FROM size_hits h WHERE s.id = h.id AND (SELECT good FROM ok)
+         AND ((SELECT target FROM r) = 'USD' AND s.price_usd IS NULL OR (SELECT target FROM r) = 'LBP' AND s.price_lbp IS NULL)
+       RETURNING s.id
      )
      SELECT (SELECT id FROM r) AS restaurant_id, (SELECT good FROM ok) AS good`,
     [ownerId, entries.map((e) => e.itemId), entries.map((e) => e.label.trim().toUpperCase()), prices, restaurant.currencies],

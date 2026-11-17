@@ -31,14 +31,12 @@ export default function FillPrices({ rows, target, disabled = false }: { rows: M
     router.refresh();
   }
 
-  let lastCategory = '';
   return (
     <form onSubmit={onSubmit} method="post" action="/api/owner/prices">
       <fieldset className="plain" disabled={disabled}>
         <ul className="rows">
           {rows.map((r, i) => {
-            const heading = r.category_name !== lastCategory;
-            lastCategory = r.category_name;
+            const heading = i === 0 || rows[i - 1].category_name !== r.category_name;
             return (
               <li key={`${r.item_id}-${r.label}`} className="row wrap">
                 {heading && <b className="group-title">{r.category_name}</b>}

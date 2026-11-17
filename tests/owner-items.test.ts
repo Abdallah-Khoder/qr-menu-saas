@@ -360,6 +360,12 @@ describe('filling the missing prices of the other currency', () => {
     expect((await listItems(pg, a.ownerId)).find((i) => i.name === 'Plain')!.price_lbp).toBe('450000.00');
   });
 
+  it('the same id in upper and lower case is the same item (repeated)', async () => {
+    const { pg, a, plain } = await prepare();
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '1000'), entry(plain.toUpperCase(), '2000')])).toMatchObject({ ok: false, status: 400 });
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toHaveLength(3);
+  });
+
   it('refuses bad, empty, zero and repeated prices', async () => {
     const { pg, a, plain } = await prepare();
     for (const price of ['', '  ', '0', '-5', 'abc', '1e5', '150,5', '99999999999']) {

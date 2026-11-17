@@ -165,7 +165,9 @@ restaurant's category id just gets 404.
   the restaurant does not use yet (the browser never says which currency: the database decides). Saving is
   **one SQL statement, all or nothing**: every typed price must point to an item or size of the owner's own
   restaurant that is still empty; if one does not, nothing is saved. Existing prices are never overwritten, and
-  the new prices stay hidden from customers until the currency is chosen in the settings.
+  the new prices stay hidden from customers until the currency is chosen in the settings. Two saves at the same
+  moment cannot overwrite each other or save half a batch: the rows are locked (`FOR UPDATE`) before they are
+  counted.
 - **Confirmation windows** are our own (`ConfirmDialog`, a native `<dialog>`), never the browser's `confirm()`.
 
 ## Tests
