@@ -188,6 +188,17 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
 - Text uses `dir="auto"`, so Arabic and English names each get the right direction.
 - Not cached yet on purpose: owner changes show at once. Caching is a later speed step (when deployed).
 
+## Printing and downloading the QR code (`/dashboard/qr`)
+
+- A table card (restaurant name, QR code, "امسح الرمز لعرض القائمة", the short link) that the owner prints
+  from the browser: one big card, or four per A4 page to cut. The print stylesheet hides the dashboard around it.
+- **Downloads:** `GET /api/owner/qr?format=svg|png` (`src/lib/qr-download.ts`). The restaurant is found from
+  the logged-in owner, never from the request, so nobody can download another restaurant's file. Only owners
+  (401 not logged in, 403 not an owner, 400 unknown format). Sent as an attachment with a fixed file name,
+  `no-store` and `nosniff`. PNG is 1200 px wide, SVG scales to any size. The downloaded files contain the code only;
+  the name and the sentence are on the printed card.
+- The code has the 4-square empty border (quiet zone) QR readers need.
+
 ## Tests
 
 ```
