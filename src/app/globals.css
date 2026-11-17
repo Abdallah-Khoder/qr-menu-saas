@@ -167,3 +167,28 @@ dialog.confirm p { margin: 0 0 18px; color: var(--muted); }
 .banner { background: #fdecea; color: var(--danger); border: 1px solid var(--danger); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; font-weight: 700; }
 fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; }
 fieldset.plain:disabled { opacity: .6; }
+
+/* Items */
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.panel-head h2 { margin: 0; }
+.item-form { width: 100%; padding: 12px 0 16px; }
+.item-form textarea, .item-form select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit;
+}
+.check { display: flex; align-items: center; gap: 8px; margin: 8px 0 14px; cursor: pointer; }
+.check input { accent-color: var(--brand); width: 18px; height: 18px; }
+.sizes { margin-bottom: 14px; }
+.size-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.size-row input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.size-row input:first-child { flex: 0 0 90px; text-transform: uppercase; }
+.row.muted .row-main b, .row.muted .row-main small { opacity: .55; }
+.item-form .actions { display: flex; gap: 10px; }
+.row-main .badge { align-self: flex-start; display: inline-block; width: auto; }
+.size-list { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
+/* Fill missing prices */
+.price-input { flex: 0 0 150px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; }
+.group-title { flex-basis: 100%; color: var(--brand); padding-top: 4px; }
+.panel .btn.link-btn, a.btn { text-decoration: none; display: inline-block; text-align: center; }
+.back-link { margin: 18px 0 0; }
+.back-link a { color: var(--brand); font-weight: 700; }

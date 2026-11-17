@@ -135,3 +135,30 @@ export function parseFacebook(input: string): Parsed<string | null> {
   }
   return bad;
 }
+
+// ---- prices ----
+
+const USD_MAX = 1_000_000;
+const LBP_MAX = 9_999_999_999; // NUMERIC(12,2) holds up to 9,999,999,999.99
+
+/** Dollar price: "3", "3.5", "3,50", "٣٫٥". Up to 2 decimals. Empty = no price. */
+export function parseUsd(input: string): Parsed<string | null> {
+  const s = toAsciiDigits(input).replace(/٫/g, '.').replace(/\s/g, '');
+  if (s === '') return { ok: true, value: null };
+  const bad = { ok: false as const, error: 'سعر الدولار غير صالح. اكتب رقمًا مثل 3.50 (بخانتين عشريتين على الأكثر)' };
+  if (!/^[0-9]{1,7}([.,][0-9]{1,2})?$/.test(s)) return bad;
+  const n = Number(s.replace(',', '.'));
+  if (!(n > 0) || n > USD_MAX) return bad;
+  return { ok: true, value: n.toFixed(2) };
+}
+
+/** Lira price: "150000", "150,000", "150.000" (the dot or comma only as thousands separator). No decimals. */
+export function parseLbp(input: string): Parsed<string | null> {
+  const s = toAsciiDigits(input).replace(/\s/g, '');
+  if (s === '') return { ok: true, value: null };
+  const bad = { ok: false as const, error: 'سعر الليرة غير صالح. اكتب رقمًا صحيحًا مثل 150000' };
+  if (!/^[0-9]+$/.test(s) && !/^[0-9]{1,3}([.,][0-9]{3})+$/.test(s)) return bad;
+  const n = Number(s.replace(/[.,]/g, ''));
+  if (!(n > 0) || n > LBP_MAX) return bad;
+  return { ok: true, value: String(n) };
+}

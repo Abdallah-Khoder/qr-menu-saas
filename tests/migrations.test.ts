@@ -16,7 +16,7 @@ describe('migration runner', () => {
   it('applies the real migrations and creates all the tables', async () => {
     const pg = new PGlite();
     const ran = await migrate(pg, 'db/migrations');
-    expect(ran).toEqual(['001_init.sql', '002_login_attempts.sql', '003_login_attempts_request_id.sql', '004_social_links.sql']);
+    expect(ran).toEqual(['001_init.sql', '002_login_attempts.sql', '003_login_attempts_request_id.sql', '004_social_links.sql', '005_item_available.sql', '006_items_restaurant_idx.sql']);
     expect(await tables(pg)).toEqual(
       ['categories', 'email_codes', 'invites', 'item_sizes', 'items', 'login_attempts', 'restaurants', 'schema_migrations', 'users'],
     );
@@ -164,5 +164,14 @@ describe('migration runner', () => {
       `INSERT INTO restaurants (owner_id, name, public_slug, logo_url) VALUES ($1, 'A', 'shaar-k3x9qp7vtz', 'https://x')`,
       [rows[0].id],
     );
+  });
+});
+
+describe('items index', () => {
+  it('has an index starting with restaurant_id (used by the per-restaurant item count)', async () => {
+    const pg = new PGlite();
+    await migrate(pg, 'db/migrations');
+    const r = await pg.query<{ indexdef: string }>(`SELECT indexdef FROM pg_indexes WHERE tablename = 'items' AND indexname = 'items_restaurant_idx'`);
+    expect(r.rows[0]?.indexdef).toContain('(restaurant_id)');
   });
 });
