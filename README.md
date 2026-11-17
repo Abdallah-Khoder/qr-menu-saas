@@ -170,6 +170,24 @@ restaurant's category id just gets 404.
   counted.
 - **Confirmation windows** are our own (`ConfirmDialog`, a native `<dialog>`), never the browser's `confirm()`.
 
+## Public menu page (`/m/<public link>`)
+
+What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/app/m/[slug]/page.tsx`).
+
+- **No login, no JavaScript needed, ONE database query** (restaurant + categories + items + sizes together).
+- **Only what is meant to be public:** available items only, categories without a visible item are hidden,
+  prices only in the currencies the restaurant uses. A **suspended restaurant** shows
+  "هذه القائمة غير متاحة حاليًا" and its items are not even read from the database.
+- **Bad links:** a link that does not look like a real one (`[a-z0-9-]`, up to 60 characters) gives 404
+  without asking the database; an unknown link gives the same 404.
+- **Buttons:** call (`tel:`), WhatsApp (`wa.me`, digits only), map, Instagram, Facebook. Only the ones the owner
+  filled in. External links open in a new tab with `rel="noopener noreferrer"`. They are text buttons, not the
+  platforms' logos (logos belong to those companies; add the official ones from their brand pages if wanted).
+- **Privacy:** the page asks search engines not to index it (`noindex`) and sends no referrer: the link is for
+  the people who scan the code. Easy to change if a restaurant wants to be found on Google.
+- Text uses `dir="auto"`, so Arabic and English names each get the right direction.
+- Not cached yet on purpose: owner changes show at once. Caching is a later speed step (when deployed).
+
 ## Tests
 
 ```

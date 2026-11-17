@@ -192,3 +192,26 @@ fieldset.plain:disabled { opacity: .6; }
 .panel .btn.link-btn, a.btn { text-decoration: none; display: inline-block; text-align: center; }
 .back-link { margin: 18px 0 0; }
 .back-link a { color: var(--brand); font-weight: 700; }
+
+/* Public menu (what customers see) */
+html { scroll-behavior: smooth; }
+.pm { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; }
+.pm-head { text-align: center; padding: 28px 0 14px; }
+.pm-head h1 { margin: 0 0 14px; font-size: 1.7rem; }
+.pm-contacts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pm-btn { text-decoration: none; color: var(--brand); border: 1px solid var(--brand); border-radius: 999px; padding: 8px 18px; font-weight: 700; background: var(--card); }
+.pm-tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; background: var(--bg); scrollbar-width: none; }
+.pm-tabs a { white-space: nowrap; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 16px; }
+.pm-cat { scroll-margin-top: 64px; margin-top: 18px; }
+.pm-cat h2 { font-size: 1.25rem; margin: 0 0 8px; color: var(--brand); }
+.pm-items { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.pm-item { display: flex; justify-content: space-between; gap: 14px; padding: 14px 16px; border-top: 1px solid var(--line); align-items: flex-start; }
+.pm-item:first-child { border-top: 0; }
+.pm-info { display: flex; flex-direction: column; min-width: 0; }
+.pm-info p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.pm-price { font-weight: 700; white-space: nowrap; }
+.pm-sizes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.pm-sizes li { display: flex; gap: 10px; }
+.pm-size { color: var(--muted); }
+.pm-empty { text-align: center; color: var(--muted); padding: 64px 16px; }
+.pm-empty b { display: block; color: var(--ink); font-size: 1.2rem; margin-bottom: 6px; }
