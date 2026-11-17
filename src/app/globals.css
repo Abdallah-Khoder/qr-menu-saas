@@ -185,3 +185,10 @@ fieldset.plain:disabled { opacity: .6; }
 .item-form .actions { display: flex; gap: 10px; }
 .row-main .badge { align-self: flex-start; display: inline-block; width: auto; }
 .size-list { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+
+/* Fill missing prices */
+.price-input { flex: 0 0 150px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; }
+.group-title { flex-basis: 100%; color: var(--brand); padding-top: 4px; }
+.panel .btn.link-btn, a.btn { text-decoration: none; display: inline-block; text-align: center; }
+.back-link { margin: 18px 0 0; }
+.back-link a { color: var(--brand); font-weight: 700; }

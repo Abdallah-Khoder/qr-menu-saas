@@ -98,7 +98,7 @@ export async function saveSettings(
   const row = res.rows[0];
   if (!row?.restaurant_id) return explain(db, ownerId, fail(404, 'المطعم غير موجود'));
   if (row.missing > 0) {
-    return fail(409, `لا يمكن اختيار هذه العملة: يوجد ${row.missing} منتج أو حجم بلا سعر بها. أكمل الأسعار أولًا.`);
+    return fail(409, `لا يمكن اختيار هذه العملة: يوجد ${row.missing} منتج أو حجم بلا سعر بها. أكمل الأسعار أولًا من صفحة «إكمال الأسعار» في الإعدادات.`);
   }
   return { ok: true };
 }

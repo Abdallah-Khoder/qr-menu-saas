@@ -3,6 +3,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { add, count, makeDb } from './helpers';
 import { parseLbp, parseUsd } from '../src/lib/owner-input';
 import { MAX_ITEMS, createItem, deleteItem, listItems, moveItem, setItemAvailable, updateItem, type ItemInput } from '../src/lib/owner-items';
+import { listMissingPrices, fillPrices } from '../src/lib/owner-prices';
 import { SUSPENDED_MESSAGE, createCategory, getOwnerRestaurant, listCategories, saveSettings } from '../src/lib/owner-menu';
 
 describe('price parsers', () => {
@@ -276,5 +277,112 @@ describe('listItems', () => {
     const items = await listItems(pg, a.ownerId);
     expect(items.map((i) => i.name)).toEqual(['Burger', 'Cola']);
     expect(items[0].sizes.map((s) => s.label)).toEqual(['L', 'S']); // the order the owner chose
+  });
+});
+
+describe('filling the missing prices of the other currency', () => {
+  const settings = (currencies: 'USD' | 'LBP' | 'BOTH') => ({ name: 'R', currencies, phone: '', mapUrl: '', instagram: '', facebook: '' });
+  const entry = (itemId: string, price: string, label = '') => ({ itemId, label, price });
+  async function prepare(currencies: 'USD' | 'LBP' = 'USD') {
+    const s = await setup(currencies);
+    const { pg, a } = s;
+    const ok = (r: unknown) => expect(r).toEqual({ ok: true });
+    if (currencies === 'USD') {
+      ok(await createItem(pg, a.ownerId, input(s.burgers, { name: 'Plain', priceUsd: '5' })));
+      ok(await createItem(pg, a.ownerId, input(s.drinks, { name: 'Cola', priceUsd: '', sizes: sizes(['S', '1', ''], ['L', '2', '']) })));
+    } else {
+      ok(await createItem(pg, a.ownerId, input(s.burgers, { name: 'Plain', priceUsd: '', priceLbp: '450000' })));
+    }
+    const items = await listItems(pg, a.ownerId);
+    return { ...s, plain: items.find((i) => i.name === 'Plain')!.id, cola: items.find((i) => i.name === 'Cola')?.id ?? '' };
+  }
+
+  it('lists only what has no price in the other currency, with the price it already has', async () => {
+    const { pg, a, burgers } = await prepare();
+    await createItem(pg, a.ownerId, input(burgers, { name: 'Done', priceUsd: '3' }));
+    await pg.query(`UPDATE items SET price_lbp = 270000 WHERE name = 'Done'`);
+    const data = (await listMissingPrices(pg, a.ownerId))!;
+    expect(data.target).toBe('LBP');
+    expect(data.rows.map((r) => [r.item_name, r.label, r.known])).toEqual([['Plain', '', '5.00'], ['Cola', 'S', '1.00'], ['Cola', 'L', '2.00']]);
+  });
+
+  it('nothing to fill when the restaurant already uses both currencies', async () => {
+    const { pg, a, plain } = await prepare();
+    await pg.query(`UPDATE restaurants SET currencies = 'BOTH' WHERE id = $1`, [a.restaurantId]);
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toEqual([]);
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '450000')])).toMatchObject({ ok: false, status: 409 });
+  });
+
+  it('saves prices for items and sizes, hidden until the currency is chosen; then the switch works', async () => {
+    const { pg, a, plain, cola } = await prepare();
+    expect(await saveSettings(pg, a.ownerId, settings('BOTH'))).toMatchObject({ ok: false, status: 409 });
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '450,000'), entry(cola, '90000', 's'), entry(cola, '180.000', 'L')])).toEqual({ ok: true });
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toEqual([]);
+    const items = await listItems(pg, a.ownerId);
+    expect(items.find((i) => i.name === 'Plain')).toMatchObject({ price_usd: '5.00', price_lbp: '450000.00' });
+    expect(items.find((i) => i.name === 'Cola')!.sizes).toMatchObject([{ label: 'S', price_lbp: '90000.00' }, { label: 'L', price_lbp: '180000.00' }]);
+    expect(await saveSettings(pg, a.ownerId, settings('BOTH'))).toEqual({ ok: true });
+  });
+
+  it('works the other way round (lira restaurant, dollar prices) and never touches the used currency', async () => {
+    const { pg, a, plain } = await prepare('LBP');
+    expect((await listMissingPrices(pg, a.ownerId))!.target).toBe('USD');
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '3,5')])).toEqual({ ok: true });
+    expect((await listItems(pg, a.ownerId))[0]).toMatchObject({ price_usd: '3.50', price_lbp: '450000.00' });
+  });
+
+  it('may fill only some of them', async () => {
+    const { pg, a, plain } = await prepare();
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '450000')])).toEqual({ ok: true });
+    expect((await listMissingPrices(pg, a.ownerId))!.rows.map((r) => r.item_name)).toEqual(['Cola', 'Cola']);
+  });
+
+  it('all or nothing: one wrong entry saves none of the others', async () => {
+    const { pg, a, b, theirs, plain, cola } = await prepare();
+    const theirItem = await add.item(pg, b.restaurantId, theirs, null);
+    for (const bad of [
+      entry(theirItem, '1000'), // another restaurant's item
+      entry(cola, '1000', 'XL'), // size that does not exist
+      entry(cola, '1000'), // item that has sizes needs a size
+      entry(plain, '1000', 'S'), // item without sizes cannot take a size
+      entry('00000000-0000-4000-8000-000000000000', '1000'), // unknown item
+    ]) {
+      expect(await fillPrices(pg, a.ownerId, [entry(plain, '450000'), bad])).toMatchObject({ ok: false, status: 409 });
+    }
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toHaveLength(3); // nothing was saved
+    expect((await pg.query(`SELECT price_lbp FROM items WHERE id = $1`, [theirItem])).rows[0]).toEqual({ price_lbp: null });
+  });
+
+  it('does not overwrite a price that is already there', async () => {
+    const { pg, a, plain } = await prepare();
+    await fillPrices(pg, a.ownerId, [entry(plain, '450000')]);
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '999999')])).toMatchObject({ ok: false, status: 409 });
+    expect((await listItems(pg, a.ownerId)).find((i) => i.name === 'Plain')!.price_lbp).toBe('450000.00');
+  });
+
+  it('refuses bad, empty, zero and repeated prices', async () => {
+    const { pg, a, plain } = await prepare();
+    for (const price of ['', '  ', '0', '-5', 'abc', '1e5', '150,5', '99999999999']) {
+      expect(await fillPrices(pg, a.ownerId, [entry(plain, price)]), price).toMatchObject({ ok: false, status: 400 });
+    }
+    expect(await fillPrices(pg, a.ownerId, [])).toMatchObject({ ok: false, status: 400 });
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '1000'), entry(plain, '2000')])).toMatchObject({ ok: false, status: 400 });
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toHaveLength(3);
+  });
+
+  it('never works on another restaurant: the owner id decides, not the browser', async () => {
+    const { pg, a, b, plain } = await prepare();
+    expect(await fillPrices(pg, b.ownerId, [entry(plain, '450000')])).toMatchObject({ ok: false, status: 409 });
+    expect((await listMissingPrices(pg, b.ownerId))!.rows).toEqual([]);
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toHaveLength(3);
+  });
+
+  it('a suspended restaurant cannot change anything', async () => {
+    const { pg, a, plain } = await prepare();
+    await pg.query(`UPDATE restaurants SET status = 'suspended' WHERE id = $1`, [a.restaurantId]);
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, '450000')])).toEqual({ ok: false, status: 403, error: SUSPENDED_MESSAGE });
+    expect(await fillPrices(pg, a.ownerId, [entry(plain, 'abc')])).toMatchObject({ status: 403 });
+    await pg.query(`UPDATE restaurants SET status = 'active' WHERE id = $1`, [a.restaurantId]);
+    expect((await listMissingPrices(pg, a.ownerId))!.rows).toHaveLength(3);
   });
 });

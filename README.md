@@ -159,6 +159,13 @@ restaurant's category id just gets 404.
   edited. Prices: dollars up to 2 decimals (`3.5`, `3,50`), lira whole numbers (`150000`, `150,000`); zero,
   negative, `NaN` and scientific notation are refused. Prices come back from the database as exact text
   (never as floating point).
+- **Completing missing prices** (`/dashboard/menu/prices`, `src/lib/owner-prices.ts`): to start using another
+  currency, the owner first fills the prices that are missing in it. The settings page shows a warning with the
+  number of missing prices and a link; the page lists only the items (or sizes) without a price in the currency
+  the restaurant does not use yet (the browser never says which currency: the database decides). Saving is
+  **one SQL statement, all or nothing**: every typed price must point to an item or size of the owner's own
+  restaurant that is still empty; if one does not, nothing is saved. Existing prices are never overwritten, and
+  the new prices stay hidden from customers until the currency is chosen in the settings.
 - **Confirmation windows** are our own (`ConfirmDialog`, a native `<dialog>`), never the browser's `confirm()`.
 
 ## Tests
