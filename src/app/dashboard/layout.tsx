@@ -8,6 +8,7 @@ import { getMyRestaurant } from '@/lib/owner-page';
 const LINKS = [
   { href: '/dashboard', label: 'الرئيسية' },
   { href: '/dashboard/menu', label: 'القائمة' },
+  { href: '/dashboard/qr', label: 'رمز QR' },
   { href: '/dashboard/settings', label: 'الإعدادات' },
 ];
 

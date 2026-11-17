@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import CopyField from '@/components/CopyField';
 import { appUrl } from '@/lib/app-url';
 import { requireOwner } from '@/lib/current-user';
@@ -24,6 +25,7 @@ export default async function OwnerHome() {
         <div className="qr-box">
           <span className="copy-label">رمز QR لقائمتك (اطبعه وضعه على الطاولات)</span>
           <div className="qr" role="img" aria-label="رمز QR لرابط القائمة" dangerouslySetInnerHTML={{ __html: menuQr }} />
+          <Link className="btn ghost" href="/dashboard/qr">طباعة وتحميل بطاقة الطاولة</Link>
         </div>
       </section>
       <section className="panel">

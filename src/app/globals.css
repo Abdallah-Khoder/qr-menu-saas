@@ -215,3 +215,25 @@ html { scroll-behavior: smooth; }
 .pm-size { color: var(--muted); }
 .pm-empty { text-align: center; color: var(--muted); padding: 64px 16px; }
 .pm-empty b { display: block; color: var(--ink); font-size: 1.2rem; margin-bottom: 6px; }
+
+/* Printable QR card */
+.panel.qr-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.qr-tools .field { margin: 0; }
+.qr-sheet { display: grid; gap: 16px; justify-items: center; }
+.qr-sheet.n4 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.qr-card { background: #fff; color: #000; border: 2px dashed #999; border-radius: 12px; padding: 20px; text-align: center; width: 100%; max-width: 420px; break-inside: avoid; }
+.qr-sheet.n1 .qr-card { max-width: 520px; }
+.qr-card h2 { margin: 0 0 8px; font-size: 1.4rem; overflow-wrap: anywhere; }
+.qr-card-code svg { display: block; width: 100%; height: auto; }
+.qr-card p { margin: 6px 0 2px; font-weight: 700; font-size: 1.1rem; }
+.qr-card small { color: #555; word-break: break-all; }
+@media print {
+  @page { margin: 12mm; }
+  html, body { background: #fff !important; }
+  .side, .no-print, .banner { display: none !important; }
+  .shell { display: block !important; }
+  .main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .qr-sheet { gap: 8mm; }
+  .qr-sheet.n1 .qr-card { max-width: 150mm; border: 0; }
+  .qr-sheet.n4 .qr-card { max-width: none; padding: 8mm; }
+}
