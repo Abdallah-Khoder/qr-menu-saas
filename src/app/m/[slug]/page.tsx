@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { getDb } from '@/lib/db';
-import { callUrl, getPublicMenu, whatsappUrl, type PublicItem } from '@/lib/public-menu';
+import { getCachedPublicMenu } from '@/lib/public-cache';
+import { callUrl, whatsappUrl, type PublicItem } from '@/lib/public-menu';
 import { priceText } from '@/lib/price';
 
-// The page a customer opens by scanning the QR code: no login, no JavaScript needed, one database query.
-const load = cache((slug: string) => getPublicMenu(getDb(), slug));
+// The page a customer opens by scanning the QR code: no login, no JavaScript needed. The menu comes from the
+// cache (one database query only when it is not there yet or was just changed); see public-cache.ts.
+const load = cache(getCachedPublicMenu);
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const result = await load((await params).slug);

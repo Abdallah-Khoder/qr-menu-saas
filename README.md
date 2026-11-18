@@ -186,7 +186,15 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
 - **Privacy:** the page asks search engines not to index it (`noindex`) and sends no referrer: the link is for
   the people who scan the code. Easy to change if a restaurant wants to be found on Google.
 - Text uses `dir="auto"`, so Arabic and English names each get the right direction.
-- Not cached yet on purpose: owner changes show at once. Caching is a later speed step (when deployed).
+- **Cached, and refreshed the moment something changes** (`src/lib/public-cache.ts`): the menu of each
+  restaurant is one cache entry named by its public link. Customers read the cache (no database query); every owner
+  change (all owner endpoints go through `ownerRoute`, which refreshes after a success) and every admin action that
+  customers can see (suspend, activate, delete) throws that entry away with `revalidateTag(tag, { expire: 0 })`,
+  so the next customer gets fresh data and never an old copy (a suspended restaurant disappears at once).
+  A made-up link is never stored (otherwise anybody could fill the cache), and an entry lives 5 minutes at most
+  even if a refresh were forgotten. A test checks that every owner endpoint uses `ownerRoute`.
+  Known small limits: right after a deploy or a refresh, customers who arrive at the very same moment may each
+  do one database query (not one per customer afterwards); the cache is shared between servers on Vercel.
 
 ## Printing and downloading the QR code (`/dashboard/qr`)
 

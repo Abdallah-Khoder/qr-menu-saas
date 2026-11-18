@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { checkAdminRequest, idSchema, notFound, readBody } from '@/lib/admin-guard';
 import { getCurrentUser } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
+import { refreshMenu, slugOfRestaurant } from '@/lib/public-cache';
 import { deleteOwnerAccount, deleteRestaurant } from '@/lib/restaurants-admin';
 
 // withAccount: false = delete the restaurant only (the owner can log in and start again);
@@ -15,6 +16,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!id.success) return notFound();
   const body = await readBody(request, Body);
   if (body instanceof Response) return body;
-  const done = body.withAccount ? await deleteOwnerAccount(getDb(), id.data) : await deleteRestaurant(getDb(), id.data);
-  return done ? Response.json({ ok: true }) : notFound();
+  const db = getDb();
+  const slug = await slugOfRestaurant(db, id.data); // asked first: after the delete the row is gone
+  const done = body.withAccount ? await deleteOwnerAccount(db, id.data) : await deleteRestaurant(db, id.data);
+  if (!done) return notFound();
+  refreshMenu(slug);
+  return Response.json({ ok: true });
 }
