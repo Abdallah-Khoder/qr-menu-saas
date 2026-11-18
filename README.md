@@ -207,6 +207,31 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   the name and the sentence are on the printed card.
 - The code has the 4-square empty border (quiet zone) QR readers need.
 
+## Forgot password (`/forgot`, `/reset?token=...`)
+
+`src/lib/password-reset.ts` (logic) and `src/lib/password-reset-request.ts` (the two requests, testable without Next).
+
+- **Owners only.** The super admin's password is changed with the script on the admin's own computer, so a stolen
+  mailbox can never become the most powerful account. (`/forgot` still answers the same "ok" for his email.)
+- **The same answer for everybody.** `/forgot` says "if this email is registered we sent a link" whether the email is
+  an owner, a stranger or the admin: nobody can use it to find out who has an account. The mail is sent AFTER the
+  answer (`after()`), so the answer is equally fast either way, and a failing mail service is logged, never shown.
+- **The link** is like an invite: 32 random bytes, valid 20 minutes, works once. Only its SHA-256 hash is stored (in
+  `email_codes`, purpose `reset_password`; a database leak gives no working link). A new request cancels the older
+  link. The page `/reset` sends no referrer and asks not to be indexed (the token is in the address); the token goes
+  to the server in the request body, never in a URL that is logged.
+- **ONE SQL statement** uses up the link (it is deleted), changes the password, remembers the moment
+  (`users.password_changed_at`) and cancels every other link of that person. Two people sending the link at the same
+  moment: only one wins.
+- **Old logins die.** The login cookie knows when it was made; a cookie older than `password_changed_at` is refused
+  (`src/lib/session-user.ts`, checked on every request together with the database read). After a reset he must log in
+  with the new password (no automatic login).
+- **Limits.** `/forgot`: 5 per 15 minutes per address and per email (also for emails that do not exist, so the limit
+  says nothing either). `/reset`: 5 wrong links per 15 minutes per address. A wrong-password counter of the email is
+  cleared by a successful reset. Known small trade-off: somebody can ask 5 times for another person's email and
+  keep him from asking for 15 minutes (the same trade-off as the login limit).
+- Mistakes in the form (too short, not the same twice) are answered before the limit and do not use up the link.
+
 ## Tests
 
 ```

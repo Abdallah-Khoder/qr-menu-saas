@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import Brand from '@/components/Brand';
 import LoginForm from '@/components/LoginForm';
@@ -5,7 +6,8 @@ import { getCurrentUser } from '@/lib/current-user';
 
 export const metadata = { title: 'تسجيل الدخول' };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string | string[] }> }) {
+  const { reset } = await searchParams;
   const user = await getCurrentUser();
   if (user) redirect(user.role === 'super_admin' ? '/admin' : '/dashboard');
   return (
@@ -13,7 +15,9 @@ export default async function LoginPage() {
       <div className="auth-card">
         <Brand as="h1" />
         <p className="sub">سجّل الدخول لإدارة قائمة الطعام</p>
+        {reset === '1' && <p className="note success" role="status">تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.</p>}
         <LoginForm />
+        <p className="note"><Link href="/forgot">نسيت كلمة المرور؟</Link></p>
       </div>
     </main>
   );
