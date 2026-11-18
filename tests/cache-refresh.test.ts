@@ -63,6 +63,15 @@ describe('owner changes refresh the cached public menu', () => {
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
   });
 
+  it('if the link of the restaurant cannot be read, NOTHING is saved (never "error" for a change that was saved)', async () => {
+    const { pg, a } = await setup();
+    mocks.user.current = owner(a.ownerId);
+    const real = pg.query.bind(pg);
+    mocks.db.current = { query: async (text: string, params?: unknown[]) => { if (text.includes('SELECT public_slug')) throw new Error('db hiccup'); return real(text, params as never); } };
+    await expect(addCategory(json({ name: 'Drinks' }))).rejects.toThrow('db hiccup');
+    expect((await pg.query(`SELECT 1 FROM categories WHERE name = 'Drinks'`)).rows).toHaveLength(0);
+  });
+
   it('a refused or failed change refreshes nothing (nothing changed)', async () => {
     const { a } = await setup();
     mocks.user.current = owner(a.ownerId);

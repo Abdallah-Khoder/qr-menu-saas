@@ -12,15 +12,17 @@ const TOO_MANY: ResetResponse = { status: 429, body: { error: 'عدد المحا
 const bad = (error: string): ResetResponse => ({ status: 400, body: { error } });
 const ipOf = (request: Request) => request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
 
-async function readJson(request: Request): Promise<unknown | ResetResponse> {
-  if (!isJsonRequest(request)) return { status: 415, body: { error: 'نوع الطلب غير مقبول' } } satisfies ResetResponse;
+// A tagged result: what the visitor sent ("json") can never be mistaken for our own error answer ("failed").
+type Read = { failed: ResetResponse } | { json: unknown };
+
+async function readJson(request: Request): Promise<Read> {
+  if (!isJsonRequest(request)) return { failed: { status: 415, body: { error: 'نوع الطلب غير مقبول' } } };
   try {
-    return await request.json();
+    return { json: await request.json() };
   } catch {
-    return bad('طلب غير صالح');
+    return { failed: bad('طلب غير صالح') };
   }
 }
-const isResponse = (x: unknown): x is ResetResponse => typeof x === 'object' && x !== null && 'status' in x && 'body' in x;
 
 const ForgotBody = z.object({ email: z.string().max(EMAIL_MAX) });
 
@@ -31,22 +33,22 @@ const ForgotBody = z.object({ email: z.string().max(EMAIL_MAX) });
  * Every request counts against a limit (per address and per email), also the ones that send nothing.
  */
 export async function handleForgot(request: Request, db: Db, send: (mail: Mail) => void | Promise<void>): Promise<ResetResponse> {
-  const json = await readJson(request);
-  if (isResponse(json)) return json;
-  const parsed = ForgotBody.safeParse(json);
+  const read = await readJson(request);
+  if ('failed' in read) return read.failed;
+  const parsed = ForgotBody.safeParse(read.json);
   if (!parsed.success) return bad('طلب غير صالح');
   const email = parsed.data.email.trim().toLowerCase();
 
   const slot = await reserveAttempt(db, [`forgot:ip:${ipOf(request)}`, `forgot:email:${email}`]);
   if (!slot.allowed) return TOO_MANY; // the attempt stays counted: asking again and again does not reset the clock
 
-  const mail = await createResetMail(db, email);
-  if (mail) {
-    try {
-      await send(mail);
-    } catch (e) {
-      console.error('Reset email failed:', e instanceof Error ? e.message : e); // never shown: it would reveal the account exists
-    }
+  // Creating the mail (it needs APP_URL and the database) and sending it are BOTH inside the try: whatever goes wrong
+  // is only logged. An error only for registered emails would reveal who has an account.
+  try {
+    const mail = await createResetMail(db, email);
+    if (mail) await send(mail);
+  } catch (e) {
+    console.error('Reset email failed:', e instanceof Error ? e.message : e);
   }
   return { status: 200, body: { ok: true } };
 }
@@ -55,9 +57,9 @@ const ResetBody = z.object({ token: z.string().min(1).max(200), password: z.stri
 
 /** "Here is my new password" (with the secret token from the mail). */
 export async function handleReset(request: Request, db: Db): Promise<ResetResponse> {
-  const json = await readJson(request);
-  if (isResponse(json)) return json;
-  const parsed = ResetBody.safeParse(json);
+  const read = await readJson(request);
+  if ('failed' in read) return read.failed;
+  const parsed = ResetBody.safeParse(read.json);
   if (!parsed.success) return bad('طلب غير صالح');
 
   // Mistakes in the form do not count against the limit: only guessing links does.

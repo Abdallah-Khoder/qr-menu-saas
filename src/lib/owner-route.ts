@@ -5,7 +5,7 @@ import { getDb } from './db';
 import type { Db } from './db';
 import { checkOwnerRequest } from './owner-guard';
 import type { Result } from './owner-menu';
-import { refreshMenuOfOwner } from './public-cache';
+import { refreshMenu, slugOfOwner } from './public-cache';
 
 /**
  * Shared shape of every owner endpoint: who are you → is it JSON → valid id → valid body → do it.
@@ -29,8 +29,10 @@ export async function ownerRoute<S extends z.ZodTypeAny>(
   const body = await readBody(request, options.schema);
   if (body instanceof Response) return body;
   const db = getDb();
+  // The link is asked BEFORE the change (it never changes): if this fails, nothing was saved yet.
+  const slug = await slugOfOwner(db, user.id);
   const result = await run(db, user.id, body, id);
   // Every owner endpoint changes something customers may see: throw away the cached public menu.
-  if (result.ok) await refreshMenuOfOwner(db, user.id);
+  if (result.ok) refreshMenu(slug);
   return result.ok ? Response.json({ ok: true }) : Response.json({ error: result.error }, { status: result.status });
 }

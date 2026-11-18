@@ -6,7 +6,7 @@ import { SLUG_PATTERN, getPublicMenu, type PublicResult } from './public-menu';
 // The public menu is read by many customers and changed by few owners, so it is kept in the cache and
 // thrown away THE MOMENT someone changes it (one cache entry per restaurant, named by its public link).
 //
-//  * Every owner write goes through `ownerRoute`, which calls `refreshMenuOfOwner` after a success.
+//  * Every owner write goes through `ownerRoute`, which calls `refreshMenu` after a success.
 //  * Every admin action that changes what customers see (suspend, activate, delete) calls `refreshMenu`.
 //  * Safety net: even if a refresh were ever forgotten, an entry lives 5 minutes at most.
 
@@ -43,10 +43,13 @@ export function refreshMenu(slug: string | null | undefined) {
   if (slug) revalidateTag(menuTag(slug), { expire: 0 });
 }
 
-/** After an owner's change: find his restaurant's link (one small query, only on writes) and refresh it. */
-export async function refreshMenuOfOwner(db: Db, ownerId: string) {
+/**
+ * The public link of an owner's restaurant. Asked BEFORE his change is saved: if this question fails we stop
+ * before saving anything, so a saved change can never end up with an error answer and an old cached menu.
+ */
+export async function slugOfOwner(db: Db, ownerId: string): Promise<string | null> {
   const res = await db.query(`SELECT public_slug FROM restaurants WHERE owner_id = $1`, [ownerId]);
-  refreshMenu(res.rows[0]?.public_slug);
+  return res.rows[0]?.public_slug ?? null;
 }
 
 /** The public link of a restaurant (admin side: asked BEFORE a delete, while the row still exists). */

@@ -221,6 +221,33 @@ describe('handleForgot', () => {
     spy.mockRestore();
   });
 
+  it('a failure while CREATING the mail (APP_URL missing in production) is hidden too: same answer as for a stranger', async () => {
+    const pg = await makeDb();
+    await owner(pg);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_URL', '');
+    const mails: Mail[] = [];
+    const send = (m: Mail) => { mails.push(m); };
+    const registered = await handleForgot(post({ email: 'owner@example.com' }), pg, send);
+    const stranger = await handleForgot(post({ email: 'nobody@example.com' }, '2.2.2.2'), pg, send);
+    vi.unstubAllEnvs();
+    spy.mockRestore();
+    expect(registered).toEqual(OK);
+    expect(stranger).toEqual(OK);
+    expect(mails).toEqual([]);
+  });
+
+  it('a body that LOOKS like our own answer is still checked like any other body', async () => {
+    const pg = await makeDb();
+    await owner(pg);
+    const mails: Mail[] = [];
+    const res = await handleForgot(post({ status: 200, body: { ok: true } }), pg, (m) => { mails.push(m); });
+    expect(res).toEqual({ status: 400, body: { error: 'طلب غير صالح' } }); // not the fake success it asked for
+    const reset = await handleReset(post({ status: 200, body: { redirect: '/x' } }), pg);
+    expect(reset.status).toBe(400);
+  });
+
   it('is limited to 5 requests per email and per address, whatever the email', async () => {
     const pg = await makeDb();
     await owner(pg);

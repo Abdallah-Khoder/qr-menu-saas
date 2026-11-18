@@ -195,6 +195,12 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   even if a refresh were forgotten. A test checks that every owner endpoint uses `ownerRoute`.
   Known small limits: right after a deploy or a refresh, customers who arrive at the very same moment may each
   do one database query (not one per customer afterwards); the cache is shared between servers on Vercel.
+  Two more known limits (a fix would need a shared lock such as Redis, too heavy for this project):
+  (1) a customer's read that STARTED just before a change and finishes just after it may store the old menu;
+  it disappears by itself within 5 minutes. (2) The 5 minutes are a time after which the entry is
+  recomputed; if the database is down at that moment Next.js may keep serving the old entry until it recovers.
+  The owner's restaurant link is read BEFORE his change is saved, so a failing read stops everything before anything
+  is saved (never an error answer for a change that was saved).
 
 ## Printing and downloading the QR code (`/dashboard/qr`)
 
@@ -231,6 +237,11 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   cleared by a successful reset. Known small trade-off: somebody can ask 5 times for another person's email and
   keep him from asking for 15 minutes (the same trade-off as the login limit).
 - Mistakes in the form (too short, not the same twice) are answered before the limit and do not use up the link.
+- **Known small limits:** (1) somebody who logs in with the OLD password at the very same moment as the reset
+  can get a cookie that survives it (it needs the old password and perfect timing); a fix would carry a password
+  version inside the cookie. (2) A cookie made in the same second as the reset is accepted (on purpose: the person
+  who just logged in with the new password must not be thrown out). (3) Two requests at the very same moment can
+  leave two valid links for the same person; both still expire in 20 minutes and work once.
 
 ## Tests
 
