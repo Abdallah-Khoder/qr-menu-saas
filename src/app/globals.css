@@ -237,3 +237,5 @@ html { scroll-behavior: smooth; }
   .qr-sheet.n1 .qr-card { max-width: 150mm; border: 0; }
   .qr-sheet.n4 .qr-card { max-width: none; padding: 8mm; }
 }
+.auth-card .note a { color: var(--brand); font-weight: 700; }
+.auth-card form + .note { margin: 16px 0 0; text-align: center; }

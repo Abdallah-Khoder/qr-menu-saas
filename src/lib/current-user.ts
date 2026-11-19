@@ -2,7 +2,8 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getDb } from './db';
-import { SESSION_COOKIE, readSessionToken } from './session';
+import { SESSION_COOKIE, readSession } from './session';
+import { findSessionUser } from './session-user';
 
 export type CurrentUser = { id: string; email: string; role: 'super_admin' | 'owner' };
 
@@ -12,13 +13,9 @@ export type CurrentUser = { id: string; email: string; role: 'super_admin' | 'ow
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  const id = await readSessionToken(token);
-  if (!id) return null;
-  const res = await getDb().query(
-    `SELECT id, email, role FROM users WHERE id = $1 AND email_verified_at IS NOT NULL`,
-    [id],
-  );
-  return res.rows[0] ?? null;
+  const session = await readSession(token);
+  if (!session) return null;
+  return findSessionUser(getDb(), session.userId, session.issuedAt);
 });
 
 export async function requireSuperAdmin(): Promise<CurrentUser> {
