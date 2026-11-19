@@ -190,7 +190,8 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   restaurant is one cache entry named by its public link. Customers read the cache (no database query); every owner
   change (all owner endpoints go through `ownerRoute`, which refreshes after a success) and every admin action that
   customers can see (suspend, activate, delete) throws that entry away with `revalidateTag(tag, { expire: 0 })`,
-  so the next customer gets fresh data and never an old copy (a suspended restaurant disappears at once).
+  so the next customer normally gets fresh data (a suspended restaurant disappears at once), with the small
+  exceptions listed below.
   A made-up link is never stored (otherwise anybody could fill the cache), and an entry lives 5 minutes at most
   even if a refresh were forgotten. A test checks that every owner endpoint uses `ownerRoute`.
   Known small limits: right after a deploy or a refresh, customers who arrive at the very same moment may each
@@ -200,7 +201,8 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   it disappears by itself within 5 minutes. (2) The 5 minutes are a time after which the entry is
   recomputed; if the database is down at that moment Next.js may keep serving the old entry until it recovers.
   The owner's restaurant link is read BEFORE his change is saved, so a failing read stops everything before anything
-  is saved (never an error answer for a change that was saved).
+  is saved. The refresh AFTER the save only logs a failure (the change is saved, so the answer stays "ok" and the
+  old copy ends by itself within 5 minutes).
 
 ## Printing and downloading the QR code (`/dashboard/qr`)
 
@@ -220,8 +222,9 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
 - **Owners only.** The super admin's password is changed with the script on the admin's own computer, so a stolen
   mailbox can never become the most powerful account. (`/forgot` still answers the same "ok" for his email.)
 - **The same answer for everybody.** `/forgot` says "if this email is registered we sent a link" whether the email is
-  an owner, a stranger or the admin: nobody can use it to find out who has an account. The mail is sent AFTER the
-  answer (`after()`), so the answer is equally fast either way, and a failing mail service is logged, never shown.
+  an owner, a stranger or the admin: nobody can use it to find out who has an account. Everything that
+  differs (looking the email up, writing the link, sending the mail) runs AFTER the answer (`after()`), so the
+  answer takes the same time either way, and a failure there is logged, never shown.
 - **The link** is like an invite: 32 random bytes, valid 20 minutes, works once. Only its SHA-256 hash is stored (in
   `email_codes`, purpose `reset_password`; a database leak gives no working link). A new request cancels the older
   link. The page `/reset` sends no referrer and asks not to be indexed (the token is in the address); the token goes

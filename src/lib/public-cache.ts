@@ -45,7 +45,7 @@ export function refreshMenu(slug: string | null | undefined) {
 
 /**
  * The public link of an owner's restaurant. Asked BEFORE his change is saved: if this question fails we stop
- * before saving anything, so a saved change can never end up with an error answer and an old cached menu.
+ * before saving anything (the refresh itself, after the save, only logs a failure).
  */
 export async function slugOfOwner(db: Db, ownerId: string): Promise<string | null> {
   const res = await db.query(`SELECT public_slug FROM restaurants WHERE owner_id = $1`, [ownerId]);

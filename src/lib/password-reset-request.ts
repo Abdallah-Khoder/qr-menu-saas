@@ -28,11 +28,18 @@ const ForgotBody = z.object({ email: z.string().max(EMAIL_MAX) });
 
 /**
  * "I forgot my password". The answer is ALWAYS the same "ok", whether the email is registered or not, so this
- * page cannot be used to find out who has an account. The mail is handed to `send` (the route sends it AFTER the
- * answer, so the time taken does not depend on whether a mail was sent either).
+ * page cannot be used to find out who has an account.
+ * ALL the work that differs (look the email up, write the link, send the mail) runs in `defer`, which the route
+ * runs AFTER the answer went out: before the answer every request does the same work (read, limit, answer), so
+ * the time taken says nothing either. Whatever goes wrong in that work is only logged, never shown.
  * Every request counts against a limit (per address and per email), also the ones that send nothing.
  */
-export async function handleForgot(request: Request, db: Db, send: (mail: Mail) => void | Promise<void>): Promise<ResetResponse> {
+export async function handleForgot(
+  request: Request,
+  db: Db,
+  send: (mail: Mail) => void | Promise<void>,
+  defer: (task: () => Promise<void>) => void | Promise<void> = (task) => task(),
+): Promise<ResetResponse> {
   const read = await readJson(request);
   if ('failed' in read) return read.failed;
   const parsed = ForgotBody.safeParse(read.json);
@@ -42,14 +49,14 @@ export async function handleForgot(request: Request, db: Db, send: (mail: Mail) 
   const slot = await reserveAttempt(db, [`forgot:ip:${ipOf(request)}`, `forgot:email:${email}`]);
   if (!slot.allowed) return TOO_MANY; // the attempt stays counted: asking again and again does not reset the clock
 
-  // Creating the mail (it needs APP_URL and the database) and sending it are BOTH inside the try: whatever goes wrong
-  // is only logged. An error only for registered emails would reveal who has an account.
-  try {
-    const mail = await createResetMail(db, email);
-    if (mail) await send(mail);
-  } catch (e) {
-    console.error('Reset email failed:', e instanceof Error ? e.message : e);
-  }
+  await defer(async () => {
+    try {
+      const mail = await createResetMail(db, email);
+      if (mail) await send(mail);
+    } catch (e) {
+      console.error('Reset email failed:', e instanceof Error ? e.message : e);
+    }
+  });
   return { status: 200, body: { ok: true } };
 }
 

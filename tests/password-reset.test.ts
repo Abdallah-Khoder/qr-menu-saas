@@ -65,6 +65,23 @@ describe('createResetMail', () => {
   });
 });
 
+describe('createResetMail when the mail cannot be built', () => {
+  it('the older link keeps working (nothing is deleted or written first)', async () => {
+    const pg = await makeDb();
+    await owner(pg);
+    const first = (await createResetMail(pg, 'owner@example.com'))!;
+    try {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('APP_URL', '');
+      await expect(createResetMail(pg, 'owner@example.com')).rejects.toThrow('APP_URL');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(await getResetEmail(pg, tokenFrom(first))).toBe('owner@example.com');
+    expect((await pg.query(`SELECT 1 FROM email_codes WHERE purpose = 'reset_password'`)).rows).toHaveLength(1);
+  });
+});
+
 describe('getResetEmail', () => {
   it('unknown, expired and made-up links give nothing', async () => {
     const pg = await makeDb();
@@ -225,17 +242,36 @@ describe('handleForgot', () => {
     const pg = await makeDb();
     await owner(pg);
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('APP_URL', '');
     const mails: Mail[] = [];
     const send = (m: Mail) => { mails.push(m); };
-    const registered = await handleForgot(post({ email: 'owner@example.com' }), pg, send);
-    const stranger = await handleForgot(post({ email: 'nobody@example.com' }, '2.2.2.2'), pg, send);
-    vi.unstubAllEnvs();
-    spy.mockRestore();
+    let registered, stranger;
+    try {
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('APP_URL', '');
+      registered = await handleForgot(post({ email: 'owner@example.com' }), pg, send);
+      stranger = await handleForgot(post({ email: 'nobody@example.com' }, '2.2.2.2'), pg, send);
+    } finally {
+      vi.unstubAllEnvs(); // always, even if a request rejects: other tests need APP_URL
+      spy.mockRestore();
+    }
     expect(registered).toEqual(OK);
     expect(stranger).toEqual(OK);
     expect(mails).toEqual([]);
+  });
+
+  it('the answer goes out BEFORE any work that differs: nothing is looked up, written or sent until the deferred task runs', async () => {
+    const pg = await makeDb();
+    await owner(pg);
+    const mails: Mail[] = [];
+    const tasks: Array<() => Promise<void>> = [];
+    const count = async () => Number(((await pg.query(`SELECT count(*)::int AS n FROM email_codes WHERE purpose = 'reset_password'`)).rows[0] as { n: number }).n);
+    const res = await handleForgot(post({ email: 'owner@example.com' }), pg, (m) => { mails.push(m); }, (t) => { tasks.push(t); });
+    expect(res).toEqual(OK);
+    expect(await count()).toBe(0); // the link is not even written yet
+    expect(mails).toEqual([]);
+    await tasks[0]();
+    expect(await count()).toBe(1);
+    expect(mails).toHaveLength(1);
   });
 
   it('a body that LOOKS like our own answer is still checked like any other body', async () => {

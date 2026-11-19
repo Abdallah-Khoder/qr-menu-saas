@@ -72,6 +72,19 @@ describe('owner changes refresh the cached public menu', () => {
     expect((await pg.query(`SELECT 1 FROM categories WHERE name = 'Drinks'`)).rows).toHaveLength(0);
   });
 
+  it('if the refresh itself fails AFTER the save, the answer stays "ok" (the change is saved)', async () => {
+    const { pg, a } = await setup();
+    mocks.user.current = owner(a.ownerId);
+    mocks.revalidateTag.mockImplementation(() => { throw new Error('cache down'); });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect((await addCategory(json({ name: 'Drinks' }))).status).toBe(200);
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await pg.query(`SELECT 1 FROM categories WHERE name = 'Drinks'`)).rows).toHaveLength(1);
+  });
+
   it('a refused or failed change refreshes nothing (nothing changed)', async () => {
     const { a } = await setup();
     mocks.user.current = owner(a.ownerId);

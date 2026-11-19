@@ -33,6 +33,13 @@ export async function ownerRoute<S extends z.ZodTypeAny>(
   const slug = await slugOfOwner(db, user.id);
   const result = await run(db, user.id, body, id);
   // Every owner endpoint changes something customers may see: throw away the cached public menu.
-  if (result.ok) refreshMenu(slug);
+  if (result.ok) {
+    try {
+      refreshMenu(slug);
+    } catch (e) {
+      // The change IS saved: do not answer "error". The cached copy then ends by itself within 5 minutes.
+      console.error('menu cache refresh failed:', e instanceof Error ? e.message : e);
+    }
+  }
   return result.ok ? Response.json({ ok: true }) : Response.json({ error: result.error }, { status: result.status });
 }

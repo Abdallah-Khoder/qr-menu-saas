@@ -42,14 +42,17 @@ export async function createResetMail(db: Db, emailInput: string): Promise<Mail 
   const userId = found.rows[0]?.id;
   if (!userId) return null;
 
+  // The mail is built BEFORE anything is written: if it cannot be built (APP_URL missing) nothing is touched
+  // and the older link keeps working.
   const token = randomBytes(32).toString('base64url');
+  const mail = resetMail(email, resetLink(token));
   await db.query(
     `WITH old AS (DELETE FROM email_codes WHERE user_id = $1 AND purpose = 'reset_password')
      INSERT INTO email_codes (user_id, purpose, code_hash, expires_at)
      VALUES ($1, 'reset_password', $2, now() + make_interval(mins => $3))`,
     [userId, hashToken(token), RESET_MINUTES],
   );
-  return resetMail(email, resetLink(token));
+  return mail;
 }
 
 /** The email a still-valid reset link belongs to (to show it on the page), or null (unknown, used, expired). */
