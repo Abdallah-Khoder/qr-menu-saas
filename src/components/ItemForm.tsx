@@ -101,9 +101,9 @@ export default function ItemForm({
             <img className="photo-preview" src={imageUrl} alt="" width={96} height={96} referrerPolicy="no-referrer" />
           )}
           <div className="actions">
-            <label className={`btn ghost small${uploading ? ' disabled' : ''}`}>
+            <label className={`btn ghost small file-pick${uploading ? ' disabled' : ''}`}>
               {uploading ? 'جارٍ رفع الصورة...' : imageUrl ? 'تغيير الصورة' : 'اختيار صورة'}
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} disabled={uploading || !hydrated} hidden />
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} disabled={uploading || !hydrated} className="sr-only" />
             </label>
             {imageUrl && !uploading && (
               <button type="button" className="btn ghost small danger" onClick={() => setImageUrl('')}>إزالة الصورة</button>

@@ -10,6 +10,19 @@ import { IMAGE_EXT, IMAGE_MIME, type ImageType } from './image-type';
 
 const HOST_SUFFIX = '.public.blob.vercel-storage.com';
 export const IMAGE_URL_MAX = 500;
+
+/**
+ * The exact address of OUR store, e.g. abc123.public.blob.vercel-storage.com. Every Blob store has its own, and
+ * all of them end the same way, so the ending alone would also accept somebody else's store.
+ * It comes from BLOB_PUBLIC_HOST if you set it, otherwise from the store id inside BLOB_READ_WRITE_TOKEN
+ * (vercel_blob_rw_<store id>_<secret>). If neither is there, no link is accepted (safe by default).
+ */
+export function ourImageHost(): string | null {
+  const set = process.env.BLOB_PUBLIC_HOST?.trim().toLowerCase();
+  if (set) return set;
+  const id = /^vercel_blob_rw_([A-Za-z0-9]+)_/.exec(process.env.BLOB_READ_WRITE_TOKEN ?? '')?.[1];
+  return id ? `${id.toLowerCase()}${HOST_SUFFIX}` : null;
+}
 const folderOf = (restaurantId: string) => `restaurants/${restaurantId}/`;
 
 /** Saves one image and returns its public link. The file name is random: links cannot be guessed. */
@@ -23,9 +36,10 @@ export async function saveImage(restaurantId: string, bytes: Uint8Array, type: I
   return blob.url;
 }
 
-/** Is this link one of OUR images, inside THIS restaurant's folder? (https, our storage host, nothing extra). */
+/** Is this link one of OUR images, inside THIS restaurant's folder? (https, OUR store's address, nothing extra). */
 export function isOwnImageUrl(value: string, restaurantId: string): boolean {
-  if (value.length > IMAGE_URL_MAX) return false;
+  const host = ourImageHost();
+  if (!host || value.length > IMAGE_URL_MAX) return false;
   let url: URL;
   try {
     url = new URL(value);
@@ -34,7 +48,7 @@ export function isOwnImageUrl(value: string, restaurantId: string): boolean {
   }
   return (
     url.protocol === 'https:' && !url.username && !url.password && !url.port && !url.search && !url.hash &&
-    url.hostname.endsWith(HOST_SUFFIX) && url.hostname.length > HOST_SUFFIX.length &&
+    url.hostname === host &&
     url.pathname.startsWith(`/${folderOf(restaurantId)}`) && url.pathname.length > folderOf(restaurantId).length + 1
   );
 }

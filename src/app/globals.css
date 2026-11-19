@@ -185,6 +185,10 @@ fieldset.plain:disabled { opacity: .6; }
 .photo-preview { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); margin: 6px 0; }
 .row-photo { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: 8px; background: var(--line); }
 .btn.disabled { opacity: .6; pointer-events: none; }
+/* The real file input stays in the page (so keyboard and screen readers reach it) but is invisible; the label shows the focus. */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.file-pick { position: relative; }
+.file-pick:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
 .row.muted .row-main b, .row.muted .row-main small { opacity: .55; }
 .item-form .actions { display: flex; gap: 10px; }
 .row-main .badge { align-self: flex-start; display: inline-block; width: auto; }

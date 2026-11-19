@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { add, makeDb } from './helpers';
 
 // The storage service itself (Vercel Blob) is never called from the tests: its three functions are replaced.
@@ -15,7 +15,7 @@ vi.mock('../src/lib/image-storage', async (original) => ({
   forgetRestaurantImages: storage.forgetRestaurantImages,
 }));
 
-import { isOwnImageUrl } from '../src/lib/image-storage';
+import { isOwnImageUrl, ourImageHost } from '../src/lib/image-storage';
 import { handleImageUpload, UPLOAD_LIMIT } from '../src/lib/image-upload';
 import { detectImageType, MAX_IMAGE_BYTES, UPLOAD_HEADER } from '../src/lib/image-type';
 import { createItem, deleteItem, listItems, updateItem, type ItemInput } from '../src/lib/owner-items';
@@ -23,6 +23,8 @@ import { createCategory, deleteCategory, listCategories } from '../src/lib/owner
 import { getPublicMenu } from '../src/lib/public-menu';
 
 beforeEach(() => {
+  vi.stubEnv('BLOB_PUBLIC_HOST', 'store1.public.blob.vercel-storage.com');
+  vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
   storage.saveImage.mockReset();
   storage.forgetImages.mockReset();
   storage.forgetRestaurantImages.mockReset();
@@ -33,6 +35,8 @@ const JPEG = bytes(0xff, 0xd8, 0xff, 0xe0);
 const PNG = bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
 const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4, 0x57, 0x45, 0x42, 0x50, 0, 0, 0, 0]);
 const url = (restaurantId: string, name = 'item-Ab12.webp') => `https://store1.public.blob.vercel-storage.com/restaurants/${restaurantId}/${name}`;
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe('detectImageType (decided from the first bytes only)', () => {
   it('knows JPEG, PNG and WebP', () => {
@@ -61,6 +65,21 @@ describe('isOwnImageUrl: only OUR links, inside THIS restaurant\'s folder', () =
   });
   it('refuses a link inside another restaurant\'s folder', () => {
     expect(isOwnImageUrl(url(other), id)).toBe(false);
+  });
+  it('refuses a link of ANOTHER Blob store (same ending, different store), even with the right folder', () => {
+    expect(isOwnImageUrl(`https://attacker-store.public.blob.vercel-storage.com/restaurants/${id}/a.webp`, id)).toBe(false);
+  });
+  it('knows our store from BLOB_PUBLIC_HOST, or from the store id inside the token; with neither, accepts nothing', () => {
+    expect(ourImageHost()).toBe('store1.public.blob.vercel-storage.com');
+    vi.stubEnv('BLOB_PUBLIC_HOST', '');
+    expect(ourImageHost()).toBeNull();
+    expect(isOwnImageUrl(url(id), id)).toBe(false);
+    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'vercel_blob_rw_AbC123xYz_secretpart987');
+    expect(ourImageHost()).toBe('abc123xyz.public.blob.vercel-storage.com');
+    expect(isOwnImageUrl(`https://abc123xyz.public.blob.vercel-storage.com/restaurants/${id}/a.webp`, id)).toBe(true);
+    expect(isOwnImageUrl(url(id), id)).toBe(false); // store1 is not this store
+    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'garbage');
+    expect(ourImageHost()).toBeNull();
   });
   it('refuses other sites, other schemes, tricks in the address', () => {
     const bad = [
