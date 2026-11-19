@@ -28,6 +28,10 @@ export default function ItemRow({
 
   return (
     <li className={`row wrap${item.available ? '' : ' muted'}`}>
+      {item.image_url && (
+        // eslint-disable-next-line @next/next/no-img-element -- our own small, already-shrunk photo
+        <img className="row-photo" src={item.image_url} alt="" width={48} height={48} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+      )}
       <div className="row-main">
         <b>{item.name}</b> {!item.available && <span className="badge">غير متوفر</span>}
         {item.description && <small>{item.description}</small>}

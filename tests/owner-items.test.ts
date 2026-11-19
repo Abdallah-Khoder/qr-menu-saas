@@ -42,7 +42,7 @@ async function setup(currencies: 'USD' | 'LBP' | 'BOTH' = 'USD') {
   return { pg, a, b, burgers: burgers.id, drinks: drinks.id, theirs: theirs.id };
 }
 const input = (categoryId: string, over: Partial<ItemInput> = {}): ItemInput => ({
-  categoryId, name: 'Cheese burger', description: '', available: true, priceUsd: '5', priceLbp: '', sizes: [], ...over,
+  categoryId, name: 'Cheese burger', description: '', available: true, imageUrl: '', priceUsd: '5', priceLbp: '', sizes: [], ...over,
 });
 const sizes = (...rows: [string, string, string][]) => rows.map(([label, priceUsd, priceLbp]) => ({ label, priceUsd, priceLbp }));
 const names = async (pg: PGlite, ownerId: string) => (await listItems(pg, ownerId)).map((i) => i.name);

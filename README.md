@@ -246,6 +246,30 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   who just logged in with the new password must not be thrown out). (3) Two requests at the very same moment can
   leave two valid links for the same person; both still expire in 20 minutes and work once.
 
+## Item photos (Vercel Blob)
+
+An owner can add a photo to an item (in the add / edit form). Everything about where the files live is in ONE file,
+`src/lib/image-storage.ts`; to use another service later only that file changes.
+
+- **Shrunk in the browser first** (`src/lib/compress-image.ts`): at most 640 px on the long side, WebP (JPEG on old
+  browsers), usually 30-80 KB. Faster for the owner, faster page for the customer, little storage used.
+- **The server checks again** (`src/lib/image-upload.ts`, `POST /api/owner/upload`), in this order: logged in (401) →
+  an owner (403) → sent by our own page (a header another site cannot add) → small (413, 500 KB at most) →
+  restaurant active → limit (60 photos per 15 minutes per owner) → really an image. The type is decided from the
+  FIRST BYTES of the file (JPEG, PNG, WebP only; never SVG, which can hold scripts), not from the name or from what
+  the browser says. The file name is random, the restaurant is found from the login, never from the request.
+- **The database only holds links we made ourselves.** Saving an item accepts a photo link only if it is https, on our
+  storage host and inside THIS restaurant's folder `restaurants/<id>/` (`isOwnImageUrl`). A stranger's link, another
+  site, or another restaurant's photo is refused.
+- **No leftovers (best effort).** Replacing or removing a photo, deleting an item, a category, or a restaurant (admin)
+  deletes the files. If the storage is down the owner's change is still saved; a forgotten file only costs space.
+  A photo uploaded and then never saved (the owner left the form) also stays: that is why uploads are limited.
+- **Fast for customers:** `<img>` with fixed size, lazy loading, served by Vercel's CDN with a one-month cache.
+- Setup: create a PUBLIC Blob store in the Vercel dashboard (region Frankfurt), put its token in `.env.local` as
+  `BLOB_READ_WRITE_TOKEN` (never commit it). On Vercel, connecting the store to the project adds it for you.
+- Free plan limits (Vercel Hobby): 1 GB storage, 10 GB transfer, 2,000 uploads a month; beyond that Blob stops for
+  30 days (you are never charged). Tested here with a stand-in for the storage; the real service is not called by the tests.
+
 ## Tests
 
 ```

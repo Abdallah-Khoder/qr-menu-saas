@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import { postJson } from '@/lib/post-json';
 import { MAX_SIZES } from '@/lib/item-limits';
+import { uploadPhoto } from '@/lib/upload-photo';
 import { useHydrated } from '@/lib/use-hydrated';
 
 export type Currencies = 'USD' | 'LBP' | 'BOTH';
 export type ItemData = {
-  id: string; category_id: string; name: string; description: string; available: boolean;
+  id: string; category_id: string; name: string; description: string; available: boolean; image_url: string | null;
   price_usd: string | null; price_lbp: string | null;
   sizes: { label: string; price_usd: string | null; price_lbp: string | null }[];
 };
@@ -35,6 +36,8 @@ export default function ItemForm({
   const [sizes, setSizes] = useState<SizeRow[]>(
     item?.sizes.map((s) => ({ label: s.label, priceUsd: usdText(s.price_usd), priceLbp: lbpText(s.price_lbp) })) ?? [],
   );
+  const [imageUrl, setImageUrl] = useState(item?.image_url ?? '');
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -45,12 +48,24 @@ export default function ItemForm({
   }
   const setSize = (i: number, patch: Partial<SizeRow>) => setSizes((rows) => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // so choosing the same file again still works
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    const out = await uploadPhoto(file);
+    setUploading(false);
+    if ('error' in out) return setError(out.error);
+    setImageUrl(out.url);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');
     const problem = await postJson(item ? `/api/owner/items/${item.id}/update` : '/api/owner/items', {
-      categoryId: category, name, description, available,
+      categoryId: category, name, description, available, imageUrl,
       priceUsd: withSizes ? '' : priceUsd, priceLbp: withSizes ? '' : priceLbp,
       sizes: withSizes ? sizes : [],
     });
@@ -78,6 +93,23 @@ export default function ItemForm({
             </select>
           </label>
         )}
+
+        <div className="field photo-field">
+          <span>صورة المنتج (اختيارية)</span>
+          {imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- our own small, already-shrunk photo
+            <img className="photo-preview" src={imageUrl} alt="" width={96} height={96} referrerPolicy="no-referrer" />
+          )}
+          <div className="actions">
+            <label className={`btn ghost small${uploading ? ' disabled' : ''}`}>
+              {uploading ? 'جارٍ رفع الصورة...' : imageUrl ? 'تغيير الصورة' : 'اختيار صورة'}
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} disabled={uploading || !hydrated} hidden />
+            </label>
+            {imageUrl && !uploading && (
+              <button type="button" className="btn ghost small danger" onClick={() => setImageUrl('')}>إزالة الصورة</button>
+            )}
+          </div>
+        </div>
 
         <label className="check">
           <input type="checkbox" checked={withSizes} onChange={(e) => toggleSizes(e.target.checked)} />
@@ -123,7 +155,7 @@ export default function ItemForm({
 
         {error && <p className="error" role="alert">{error}</p>}
         <div className="actions">
-          <button className="btn" disabled={!hydrated}>{busy ? 'جارٍ الحفظ...' : 'حفظ'}</button>
+          <button className="btn" disabled={!hydrated || uploading}>{busy ? 'جارٍ الحفظ...' : 'حفظ'}</button>
           <button type="button" className="btn ghost" onClick={onCancel}>إلغاء</button>
         </div>
       </fieldset>

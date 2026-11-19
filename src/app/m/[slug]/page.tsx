@@ -81,6 +81,10 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
               <ul className="pm-items">
                 {c.items.map((item, j) => (
                   <li key={j} className="pm-item">
+                    {item.image && (
+                      // eslint-disable-next-line @next/next/no-img-element -- already shrunk when uploaded; no extra optimizer
+                      <img className="pm-photo" src={item.image} alt="" width={84} height={84} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                    )}
                     <div className="pm-info">
                       <b dir="auto">{item.name}</b>
                       {item.description && <p dir="auto">{item.description}</p>}

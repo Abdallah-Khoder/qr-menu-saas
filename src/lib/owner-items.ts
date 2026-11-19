@@ -5,6 +5,7 @@ import {
   type Currencies, type Result,
 } from './owner-menu';
 import { DESCRIPTION_MAX, MAX_ITEMS, MAX_SIZES } from './item-limits';
+import { forgetImages, isOwnImageUrl } from './image-storage';
 import { hasLetterOrDigit } from './slugify';
 
 // Items and their sizes. Same rules as the rest of the owner code: the restaurant is found from the
@@ -17,18 +18,20 @@ export type ItemInput = {
   name: string;
   description: string;
   available: boolean;
+  /** '' = no photo, otherwise the link we gave when he uploaded it. */
+  imageUrl: string;
   priceUsd: string;
   priceLbp: string;
   sizes: { label: string; priceUsd: string; priceLbp: string }[];
 };
 
 type Clean = {
-  name: string; description: string; usd: string | null; lbp: string | null;
+  name: string; description: string; image: string | null; usd: string | null; lbp: string | null;
   labels: string[]; usds: (string | null)[]; lbps: (string | null)[];
 };
 
 /** Checks what the owner typed, with a clear Arabic message for each mistake. */
-function validate(input: ItemInput, currencies: Currencies): { ok: true; value: Clean } | { ok: false; error: string } {
+function validate(input: ItemInput, currencies: Currencies, restaurantId: string): { ok: true; value: Clean } | { ok: false; error: string } {
   const name = input.name.trim();
   if (Array.from(name).length < 1 || Array.from(name).length > NAME_MAX || !hasLetterOrDigit(name)) {
     return { ok: false, error: `اسم المنتج مطلوب (حتى ${NAME_MAX} حرفًا، ويحتوي على حرف أو رقم)` };
@@ -37,6 +40,12 @@ function validate(input: ItemInput, currencies: Currencies): { ok: true; value: 
   if (Array.from(description).length > DESCRIPTION_MAX) {
     return { ok: false, error: `الوصف طويل جدًا (حتى ${DESCRIPTION_MAX} حرفًا)` };
   }
+  // The photo must be one WE saved for THIS restaurant (a stranger's link, or a link to any other site, is refused).
+  const imageUrl = input.imageUrl.trim();
+  if (imageUrl !== '' && !isOwnImageUrl(imageUrl, restaurantId)) {
+    return { ok: false, error: 'الصورة غير صالحة. ارفع الصورة من جديد.' };
+  }
+  const image = imageUrl === '' ? null : imageUrl;
   const needUsd = currencies === 'USD' || currencies === 'BOTH';
   const needLbp = currencies === 'LBP' || currencies === 'BOTH';
 
@@ -54,7 +63,7 @@ function validate(input: ItemInput, currencies: Currencies): { ok: true; value: 
   if (input.sizes.length === 0) {
     const p = prices(input.priceUsd, input.priceLbp, 'السعر');
     if (!p.ok) return p;
-    return { ok: true, value: { name, description, usd: p.usd, lbp: p.lbp, labels: [], usds: [], lbps: [] } };
+    return { ok: true, value: { name, description, image, usd: p.usd, lbp: p.lbp, labels: [], usds: [], lbps: [] } };
   }
 
   if (input.sizes.length < 2) return { ok: false, error: 'المنتج ذو الأحجام يحتاج حجمين على الأقل' };
@@ -74,7 +83,7 @@ function validate(input: ItemInput, currencies: Currencies): { ok: true; value: 
     usds.push(p.usd);
     lbps.push(p.lbp);
   }
-  return { ok: true, value: { name, description, usd: null, lbp: null, labels, usds, lbps } };
+  return { ok: true, value: { name, description, image, usd: null, lbp: null, labels, usds, lbps } };
 }
 
 // The same currency rule, repeated inside the SQL: if the restaurant changed its currency while the
@@ -108,7 +117,7 @@ async function diagnose(db: Db, ownerId: string, categoryId: string, itemId: str
 export async function createItem(db: Db, ownerId: string, input: ItemInput): Promise<Result> {
   const restaurant = await getOwnerRestaurant(db, ownerId);
   if (!restaurant) return fail(404, 'المطعم غير موجود');
-  const clean = validate(input, restaurant.currencies);
+  const clean = validate(input, restaurant.currencies, restaurant.id);
   if (!clean.ok) return explain(db, ownerId, fail(400, clean.error));
   const v = clean.value;
   const res = await db.query(
@@ -116,8 +125,8 @@ export async function createItem(db: Db, ownerId: string, input: ItemInput): Pro
      cat AS (SELECT id FROM categories WHERE id = $2::uuid AND restaurant_id = (SELECT id FROM r)),
      inp AS (SELECT t.label, t.usd, t.lbp, t.ord FROM unnest($8::text[], $9::numeric[], $10::numeric[]) WITH ORDINALITY AS t(label, usd, lbp, ord)),
      newitem AS (
-       INSERT INTO items (restaurant_id, category_id, name, description, available, price_usd, price_lbp, sort_order)
-       SELECT r.id, cat.id, $3, $4, $5::boolean, $6::numeric, $7::numeric,
+       INSERT INTO items (restaurant_id, category_id, name, description, available, price_usd, price_lbp, image_url, sort_order)
+       SELECT r.id, cat.id, $3, $4, $5::boolean, $6::numeric, $7::numeric, $12::text,
               COALESCE((SELECT MAX(sort_order) + 1 FROM items WHERE category_id = cat.id), 0)
        FROM r, cat
        WHERE (SELECT count(*) FROM items WHERE restaurant_id = r.id) < $11
@@ -130,7 +139,7 @@ export async function createItem(db: Db, ownerId: string, input: ItemInput): Pro
        RETURNING id
      )
      SELECT (SELECT id FROM newitem) AS id`,
-    [ownerId, input.categoryId, v.name, v.description, input.available, v.usd, v.lbp, v.labels, v.usds, v.lbps, MAX_ITEMS],
+    [ownerId, input.categoryId, v.name, v.description, input.available, v.usd, v.lbp, v.labels, v.usds, v.lbps, MAX_ITEMS, v.image],
   );
   return res.rows[0]?.id ? { ok: true } : diagnose(db, ownerId, input.categoryId, null);
 }
@@ -138,19 +147,19 @@ export async function createItem(db: Db, ownerId: string, input: ItemInput): Pro
 export async function updateItem(db: Db, ownerId: string, itemId: string, input: ItemInput): Promise<Result> {
   const restaurant = await getOwnerRestaurant(db, ownerId);
   if (!restaurant) return fail(404, 'المطعم غير موجود');
-  const clean = validate(input, restaurant.currencies);
+  const clean = validate(input, restaurant.currencies, restaurant.id);
   if (!clean.ok) return explain(db, ownerId, fail(400, clean.error));
   const v = clean.value;
   // Prices of a currency the restaurant does not use now are kept as they are (just hidden), so
   // going back to the other currency later loses nothing. Sizes removed from the form are deleted.
   const res = await db.query(
     `WITH ${RESTAURANT},
-     it AS (SELECT id FROM items WHERE id = $2::uuid AND restaurant_id = (SELECT id FROM r)),
+     it AS (SELECT id, image_url FROM items WHERE id = $2::uuid AND restaurant_id = (SELECT id FROM r)),
      cat AS (SELECT id FROM categories WHERE id = $3::uuid AND restaurant_id = (SELECT id FROM r)),
      inp AS (SELECT t.label, t.usd, t.lbp, t.ord FROM unnest($9::text[], $10::numeric[], $11::numeric[]) WITH ORDINALITY AS t(label, usd, lbp, ord)),
      upd AS (
        UPDATE items SET
-         category_id = (SELECT id FROM cat), name = $4, description = $5, available = $6::boolean,
+         category_id = (SELECT id FROM cat), name = $4, description = $5, available = $6::boolean, image_url = $12::text,
          price_usd = CASE WHEN cardinality($9::text[]) > 0 THEN NULL WHEN (SELECT nu FROM r) THEN $7::numeric ELSE price_usd END,
          price_lbp = CASE WHEN cardinality($9::text[]) > 0 THEN NULL WHEN (SELECT nl FROM r) THEN $8::numeric ELSE price_lbp END,
          sort_order = CASE WHEN category_id = (SELECT id FROM cat) THEN sort_order
@@ -171,10 +180,13 @@ export async function updateItem(db: Db, ownerId: string, itemId: string, input:
          sort_order = EXCLUDED.sort_order
        RETURNING id
      )
-     SELECT (SELECT id FROM upd) AS id`,
-    [ownerId, itemId, input.categoryId, v.name, v.description, input.available, v.usd, v.lbp, v.labels, v.usds, v.lbps],
+     SELECT (SELECT id FROM upd) AS id, (SELECT image_url FROM it) AS old_image`,
+    [ownerId, itemId, input.categoryId, v.name, v.description, input.available, v.usd, v.lbp, v.labels, v.usds, v.lbps, v.image],
   );
-  return res.rows[0]?.id ? { ok: true } : diagnose(db, ownerId, input.categoryId, itemId);
+  const row = res.rows[0];
+  if (!row?.id) return diagnose(db, ownerId, input.categoryId, itemId);
+  if (row.old_image && row.old_image !== v.image) await forgetImages([row.old_image]); // replaced or removed photo
+  return { ok: true };
 }
 
 export async function setItemAvailable(db: Db, ownerId: string, id: string, available: boolean): Promise<Result> {
@@ -188,10 +200,12 @@ export async function setItemAvailable(db: Db, ownerId: string, id: string, avai
 /** Deletes the item; its sizes go with it (the database cascades). */
 export async function deleteItem(db: Db, ownerId: string, id: string): Promise<Result> {
   const res = await db.query(
-    `DELETE FROM items WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} RETURNING id`,
+    `DELETE FROM items WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} RETURNING id, image_url`,
     [ownerId, id],
   );
-  return res.rows.length > 0 ? { ok: true } : explain(db, ownerId, fail(404, 'المنتج غير موجود'));
+  if (res.rows.length === 0) return explain(db, ownerId, fail(404, 'المنتج غير موجود'));
+  await forgetImages([res.rows[0].image_url]);
+  return { ok: true };
 }
 
 /** Moves an item one place up or down inside its category (same renumbering idea as for categories). */
@@ -221,7 +235,7 @@ export async function moveItem(db: Db, ownerId: string, id: string, direction: '
 }
 
 export type ItemRow = {
-  id: string; category_id: string; name: string; description: string; available: boolean;
+  id: string; category_id: string; name: string; description: string; available: boolean; image_url: string | null;
   price_usd: string | null; price_lbp: string | null;
   sizes: { label: string; price_usd: string | null; price_lbp: string | null }[];
 };
@@ -229,7 +243,7 @@ export type ItemRow = {
 /** All items of the owner's restaurant with their sizes: one query. Prices come back as exact text. */
 export async function listItems(db: Db, ownerId: string): Promise<ItemRow[]> {
   const res = await db.query(
-    `SELECT i.id, i.category_id, i.name, i.description, i.available,
+    `SELECT i.id, i.category_id, i.name, i.description, i.available, i.image_url,
             i.price_usd::text AS price_usd, i.price_lbp::text AS price_lbp,
             COALESCE((SELECT json_agg(json_build_object('label', s.label, 'price_usd', s.price_usd::text, 'price_lbp', s.price_lbp::text)
                                       ORDER BY s.sort_order, s.label)
