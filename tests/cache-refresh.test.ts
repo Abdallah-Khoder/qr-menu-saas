@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('next/cache', () => ({ revalidateTag: mocks.revalidateTag, unstable_cache: mocks.unstable_cache }));
 vi.mock('../src/lib/current-user', () => ({ getCurrentUser: async () => mocks.user.current }));
 vi.mock('../src/lib/db', () => ({ getDb: () => mocks.db.current }));
+const storage = vi.hoisted(() => ({ forgetRestaurantImages: vi.fn(), forgetImages: vi.fn() }));
+vi.mock('../src/lib/image-storage', async (original) => ({ ...(await original<typeof import('../src/lib/image-storage')>()), ...storage }));
 
 import { POST as addCategory } from '../src/app/api/owner/categories/route';
 import { POST as saveSettings } from '../src/app/api/owner/settings/route';
@@ -95,7 +97,7 @@ describe('owner changes refresh the cached public menu', () => {
     expect(mocks.revalidateTag).not.toHaveBeenCalled();
   });
 
-  it('EVERY owner endpoint goes through ownerRoute (the one place that refreshes), except the QR download', () => {
+  it('EVERY owner endpoint goes through ownerRoute (the one place that refreshes), except the QR download and the photo upload', () => {
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
@@ -108,6 +110,7 @@ describe('owner changes refresh the cached public menu', () => {
     expect(files.length).toBeGreaterThan(10);
     for (const file of files) {
       if (file.includes(`${join('owner', 'qr')}`)) continue; // read-only download: changes nothing
+      if (file.includes(`${join('owner', 'upload')}`)) continue; // a photo upload: shows on the menu only when the item is saved
       expect(readFileSync(file, 'utf8'), file).toContain('ownerRoute(');
     }
   });
@@ -132,6 +135,8 @@ describe('admin actions refresh the cached public menu', () => {
     mocks.revalidateTag.mockReset();
     expect((await deleteRestaurant(json({ withAccount: true }), ctx(b.restaurantId))).status).toBe(200);
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:beta-k3x9qp7vtz', { expire: 0 });
+    // the photos of a deleted restaurant are deleted too (their folder, by the restaurant's id)
+    expect(storage.forgetRestaurantImages.mock.calls.map((c) => c[0])).toEqual([a.restaurantId, b.restaurantId]);
   });
 
   it('an unknown restaurant, or a non-admin, refreshes nothing', async () => {

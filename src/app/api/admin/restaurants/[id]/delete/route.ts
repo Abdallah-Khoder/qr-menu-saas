@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { checkAdminRequest, idSchema, notFound, readBody } from '@/lib/admin-guard';
 import { getCurrentUser } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
+import { forgetRestaurantImages } from '@/lib/image-storage';
 import { refreshMenu, slugOfRestaurant } from '@/lib/public-cache';
 import { deleteOwnerAccount, deleteRestaurant } from '@/lib/restaurants-admin';
 
@@ -21,5 +22,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const done = body.withAccount ? await deleteOwnerAccount(db, id.data) : await deleteRestaurant(db, id.data);
   if (!done) return notFound();
   refreshMenu(slug);
+  await forgetRestaurantImages(id.data); // best effort: the photos of the deleted restaurant
   return Response.json({ ok: true });
 }

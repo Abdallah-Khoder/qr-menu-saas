@@ -6,7 +6,7 @@ import { createItem, listItems, setItemAvailable, type ItemInput } from '../src/
 
 const SLUG = 'alpha-k3x9qp7vtz';
 const input = (categoryId: string, over: Partial<ItemInput> = {}): ItemInput => ({
-  categoryId, name: 'Burger', description: '', available: true, priceUsd: '5', priceLbp: '', sizes: [], ...over,
+  categoryId, name: 'Burger', description: '', available: true, imageUrl: '', priceUsd: '5', priceLbp: '', sizes: [], ...over,
 });
 
 async function setup() {

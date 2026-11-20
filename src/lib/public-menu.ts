@@ -6,7 +6,7 @@ import type { Db } from './db';
 
 export type PublicSize = { label: string; price_usd: string | null; price_lbp: string | null };
 export type PublicItem = {
-  name: string; description: string; price_usd: string | null; price_lbp: string | null; sizes: PublicSize[];
+  name: string; description: string; image: string | null; price_usd: string | null; price_lbp: string | null; sizes: PublicSize[];
 };
 export type PublicCategory = { name: string; items: PublicItem[] };
 export type PublicMenu = {
@@ -26,7 +26,7 @@ export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult>
        CASE WHEN r.status = 'active' THEN COALESCE((
          SELECT json_agg(json_build_object('name', c.name, 'items', (
            SELECT json_agg(json_build_object(
-             'name', i.name, 'description', i.description,
+             'name', i.name, 'description', i.description, 'image', i.image_url,
              'price_usd', i.price_usd::text, 'price_lbp', i.price_lbp::text,
              'sizes', COALESCE((SELECT json_agg(json_build_object('label', s.label, 'price_usd', s.price_usd::text, 'price_lbp', s.price_lbp::text)
                                 ORDER BY s.sort_order, s.label)

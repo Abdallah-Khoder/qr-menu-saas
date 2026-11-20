@@ -1,4 +1,5 @@
 import type { Db } from './db';
+import { forgetUnusedImages } from './image-cleanup';
 import { parseFacebook, parseInstagram, parseMapUrl, parsePhone } from './owner-input';
 import { hasLetterOrDigit } from './slugify';
 
@@ -148,11 +149,16 @@ export async function renameCategory(db: Db, ownerId: string, id: string, nameIn
 
 /** Deletes the category AND its items (the database cascades). */
 export async function deleteCategory(db: Db, ownerId: string, id: string): Promise<Result> {
+  // The photos of its items are read in the same statement (the items disappear with the category).
   const res = await db.query(
-    `DELETE FROM categories WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} RETURNING id`,
+    `WITH photos AS (SELECT image_url FROM items WHERE category_id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT} AND image_url IS NOT NULL)
+     DELETE FROM categories WHERE id = $2 AND restaurant_id = ${MY_ACTIVE_RESTAURANT}
+     RETURNING id, (SELECT COALESCE(array_agg(image_url), '{}') FROM photos) AS photos`,
     [ownerId, id],
   );
-  return res.rows.length > 0 ? { ok: true } : explain(db, ownerId, fail(404, 'القسم غير موجود'));
+  if (res.rows.length === 0) return explain(db, ownerId, fail(404, 'القسم غير موجود'));
+  await forgetUnusedImages(db, ownerId, res.rows[0].photos);
+  return { ok: true };
 }
 
 /**

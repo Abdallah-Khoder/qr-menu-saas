@@ -246,6 +246,40 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   who just logged in with the new password must not be thrown out). (3) Two requests at the very same moment can
   leave two valid links for the same person; both still expire in 20 minutes and work once.
 
+## Item photos (Vercel Blob)
+
+An owner can add a photo to an item (in the add / edit form). Everything about where the files live is in ONE file,
+`src/lib/image-storage.ts`; to use another service later only that file changes.
+
+- **Shrunk in the browser first** (`src/lib/compress-image.ts`): at most 640 px on the long side, WebP (JPEG on old
+  browsers), usually 30-80 KB. Faster for the owner, faster page for the customer, little storage used.
+- **The server checks again** (`src/lib/image-upload.ts`, `POST /api/owner/upload`), in this order: logged in (401) →
+  an owner (403) → sent by our own page (a header another site cannot add) → small (413, 500 KB at most) →
+  restaurant active → limit (60 photos per 15 minutes per owner) → really an image. The type is decided from the
+  FIRST BYTES of the file (JPEG, PNG, WebP only; never SVG, which can hold scripts), not from the name or from what
+  the browser says. The file name is random, the restaurant is found from the login, never from the request.
+- **The database only holds links we made ourselves.** Saving an item accepts a photo link only if it is https, on OUR
+  store's exact address (not just any Vercel store) and inside THIS restaurant's folder `restaurants/<id>/`
+  (`isOwnImageUrl`). A stranger's link, another site, another store, or another restaurant's photo is refused.
+  Our store's address comes from `BLOB_PUBLIC_HOST` if set, otherwise from the store id inside `BLOB_READ_WRITE_TOKEN`;
+  with neither, no photo link is accepted.
+- **Several items may share one photo.** A file is deleted only when NO item of the restaurant uses it any more
+  (`src/lib/image-cleanup.ts`, checked after the change was saved).
+- **No leftovers (best effort).** Replacing or removing a photo, deleting an item, a category, or a restaurant (admin)
+  deletes the files. If the storage is down the owner's change is still saved; a forgotten file only costs space.
+  A photo uploaded and then never saved (the owner left the form) also stays: that is why uploads are limited.
+- **Known small limits (a fix costs more than the harm):** (1) a photo uploaded at the very same moment the
+  administrator deletes that restaurant can stay in the storage with nothing pointing to it. (2) Two edit forms of the
+  SAME item open at once: if the first one replaces the photo and the second one is saved afterwards, the item can end
+  up pointing to a deleted file (a broken picture; uploading again fixes it). A real fix needs a version number on every
+  item edit.
+- **Keyboard:** the file input is visually hidden but still reachable with Tab, and the button shows a focus ring.
+- **Fast for customers:** `<img>` with fixed size, lazy loading, served by Vercel's CDN with a one-month cache.
+- Setup: create a PUBLIC Blob store in the Vercel dashboard (region Frankfurt), put its token in `.env.local` as
+  `BLOB_READ_WRITE_TOKEN` (never commit it). On Vercel, connecting the store to the project adds it for you.
+- Free plan limits (Vercel Hobby): 1 GB storage, 10 GB transfer, 2,000 uploads a month; beyond that Blob stops for
+  30 days (you are never charged). Tested here with a stand-in for the storage; the real service is not called by the tests.
+
 ## Tests
 
 ```

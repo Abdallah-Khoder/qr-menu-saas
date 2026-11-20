@@ -19,11 +19,14 @@ export async function deleteOldAttempts(db: Db) {
  * request is ranked by the time it wrote its row, and only the first 5 in the queue get through,
  * even when they run at the same time on different servers.
  *
+ * `limit` is 5 per 15 minutes unless the caller says otherwise (photo uploads allow more).
+ *
  * Returns the ids of the rows we wrote, so a successful login can remove them.
  */
 export async function reserveAttempt(
   db: Db,
   keys: string[],
+  limit: { max: number; minutes: number } = { max: MAX_FAILURES, minutes: WINDOW_MINUTES },
 ): Promise<{ allowed: true; ids: string[] } | { allowed: false }> {
   // Housekeeping is only needed now and then, so most logins skip this extra database trip.
   if (Math.random() < CLEANUP_CHANCE) await deleteOldAttempts(db);
@@ -48,10 +51,10 @@ export async function reserveAttempt(
       AND (a.created_at, a.request_id) <= (m.created_at, m.request_id)
      WHERE m.id = ANY($1::uuid[])
      GROUP BY m.key`,
-    [ids, WINDOW_MINUTES],
+    [ids, limit.minutes],
   );
   // Our own row is included in the count, so "more than MAX" means this is attempt number 6 or later.
-  if (counted.rows.some((r) => r.n > MAX_FAILURES)) {
+  if (counted.rows.some((r) => r.n > limit.max)) {
     await releaseAttempts(db, ids); // a refused request must not extend the block
     return { allowed: false };
   }
