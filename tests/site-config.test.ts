@@ -31,8 +31,12 @@ describe('robots.txt', () => {
   it('hides the private areas from search engines but not the whole site', () => {
     const rules = robots().rules as { userAgent: string; disallow: string[] };
     expect(rules.userAgent).toBe('*');
-    for (const p of ['/dashboard', '/admin', '/api/', '/login', '/signup', '/forgot', '/reset']) {
+    for (const p of ['/dashboard', '/admin', '/api/', '/login']) {
       expect(rules.disallow).toContain(p);
+    }
+    // these pages carry their own "noindex": a search engine must be allowed to read it
+    for (const p of ['/forgot', '/signup', '/reset']) {
+      expect(rules.disallow).not.toContain(p);
     }
     expect(rules.disallow).not.toContain('/');
     expect(rules.disallow).not.toContain('/m/'); // the customers' pages carry their own "noindex"
