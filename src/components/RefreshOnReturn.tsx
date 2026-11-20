@@ -12,15 +12,15 @@ export default function RefreshOnReturn() {
   const router = useRouter();
   useEffect(() => {
     let last = Date.now();
-    const refresh = (force = false) => {
+    const refresh = () => {
       if (document.visibilityState !== 'visible') return;
       const now = Date.now();
-      if (!force && now - last < MIN_GAP_MS) return; // coming back and forth quickly asks only once
+      if (now - last < MIN_GAP_MS) return; // coming back and forth quickly asks only once (the Back button too)
       last = now;
       router.refresh();
     };
     const onVisible = () => refresh();
-    const onShow = (e: PageTransitionEvent) => { if (e.persisted) refresh(true); }; // restored by the Back button
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) refresh(); }; // restored by the Back button
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onShow);
     return () => {

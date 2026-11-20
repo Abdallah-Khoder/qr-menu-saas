@@ -257,6 +257,10 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   the phone, the page asks once for the fresh menu (at most once every 10 seconds). There is NO timer: a page nobody
   looks at asks for nothing, so the database, the storage and the server are not loaded for nothing; the data comes
   from the cache (see above) and the photos from the browser's own cache.
+- **Known small limit:** the page tells items apart by their place in the list. If the owner deletes an item while a
+  customer has the page open (and the customer had chosen a size on it), the next item can show that size after the
+  refresh. A fix needs an id per item and category in the public data (and in the cache); the harm is only a different
+  size on show, one tap to change.
 - Settings: a short note under the map field explains how to copy the link from Google Maps.
 
 ## Item photos (Vercel Blob)

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import PublicPhoto from '../src/components/PublicPhoto';
 import PublicSizes from '../src/components/PublicSizes';
+import { pickSize } from '../src/lib/pick-size';
 
 // What the server sends before any JavaScript runs: the customer sees the right thing at once.
 const sizes = [
@@ -26,6 +27,20 @@ describe('item sizes on the public page', () => {
       sizes: [{ label: 'S', price_usd: '4.00', price_lbp: '360000' }], currencies: 'BOTH',
     }));
     expect(html).toContain('$4.00 · 360,000 ل.ل');
+  });
+});
+
+describe('pickSize: the customer\'s choice survives a refresh where the list changed', () => {
+  it('nothing chosen yet: the first size', () => {
+    expect(pickSize(sizes, null).label).toBe('S');
+  });
+  it('keeps the chosen size by NAME even if another size was removed before it (M stays M, not L)', () => {
+    const afterOwnerRemovedS = sizes.filter((s) => s.label !== 'S'); // [M, L]
+    expect(pickSize(afterOwnerRemovedS, 'M').label).toBe('M');
+    expect(pickSize(afterOwnerRemovedS, 'L').label).toBe('L'); // not the first one by accident
+  });
+  it('the chosen size itself was removed: back to the first one', () => {
+    expect(pickSize(sizes.filter((s) => s.label !== 'M'), 'M').label).toBe('S');
   });
 });
 
