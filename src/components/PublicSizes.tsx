@@ -12,7 +12,7 @@ export default function PublicSizes({ sizes, currencies }: { sizes: PublicSize[]
   const size = pickSize(sizes, chosen);
   return (
     <div className="pm-sized">
-      <bdi dir="ltr" className="pm-price" aria-live="polite">{priceText(size.price_usd, size.price_lbp, currencies)}</bdi>
+      <bdi key={size.label} dir="ltr" className={chosen === null ? 'pm-price' : 'pm-price pm-price-swap'} aria-live="polite">{priceText(size.price_usd, size.price_lbp, currencies)}</bdi>
       <div className="pm-size-btns" role="group" aria-label="الحجم">
         {sizes.map((s) => (
           <button key={s.label} type="button" className="pm-size-btn" aria-pressed={s === size} onClick={() => setChosen(s.label)}>
