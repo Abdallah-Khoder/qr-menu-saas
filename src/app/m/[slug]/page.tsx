@@ -16,7 +16,8 @@ const load = cache(getCachedPublicMenu);
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const result = await load((await params).slug);
   return {
-    title: result.state === 'ok' ? result.menu.name : 'القائمة',
+    // absolute: the customer sees only the restaurant's name in the tab (not "... | منيو QR")
+    title: { absolute: result.state === 'ok' ? result.menu.name : result.state === 'missing' ? 'الصفحة غير موجودة' : 'القائمة' },
     robots: { index: false, follow: false }, // the link is meant for the people who scan the code
     referrer: 'no-referrer',
   };

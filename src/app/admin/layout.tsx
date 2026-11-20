@@ -9,7 +9,8 @@ const LINKS = [
   { href: '/admin/invites', label: 'الدعوات' },
 ];
 
-export const metadata = { title: 'لوحة الإدارة' };
+// the template is repeated here: a title set in a layout stops the root one from reaching the pages below it
+export const metadata = { title: { default: 'لوحة الإدارة', template: '%s | منيو QR' } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSuperAdmin(); // the real check: runs on every request
