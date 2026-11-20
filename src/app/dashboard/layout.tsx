@@ -12,7 +12,8 @@ const LINKS = [
   { href: '/dashboard/settings', label: 'الإعدادات' },
 ];
 
-export const metadata = { title: 'لوحة المطعم' };
+// the template is repeated here: a title set in a layout stops the root one from reaching the pages below it
+export const metadata = { title: { default: 'لوحة المطعم', template: '%s | منيو QR' } };
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const user = await requireOwner(); // the real check: runs on every request
