@@ -70,6 +70,7 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
           <input name="facebook" dir="ltr" defaultValue={restaurant.facebook_url ?? ''} placeholder="اسم الصفحة أو الرابط" />
         </label>
       </div>
+      <p className="note">لإضافة موقع المطعم: افتح «خرائط Google» وابحث عن مطعمك، ثم اضغط «مشاركة» و«نسخ الرابط»، والصق الرابط في خانة الخريطة.</p>
       <p className="note">اترك أي خانة فارغة إذا لا تريدها، وتظهر للزبائن الأزرار التي عبّأتها فقط.</p>
 
       {error && <p className="error" role="alert">{error}</p>}

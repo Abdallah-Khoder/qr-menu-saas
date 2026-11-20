@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
+import PublicPhoto from '@/components/PublicPhoto';
+import PublicSizes from '@/components/PublicSizes';
+import RefreshOnReturn from '@/components/RefreshOnReturn';
 import { getCachedPublicMenu } from '@/lib/public-cache';
 import { callUrl, whatsappUrl, type PublicItem } from '@/lib/public-menu';
 import { priceText } from '@/lib/price';
 
-// The page a customer opens by scanning the QR code: no login, no JavaScript needed. The menu comes from the
+// The page a customer opens by scanning the QR code: no login, and the menu is readable without JavaScript (the
+// size buttons, the big photo and the refresh when coming back are small extras). The menu comes from the
 // cache (one database query only when it is not there yet or was just changed); see public-cache.ts.
 const load = cache(getCachedPublicMenu);
 
@@ -19,19 +23,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 function Price({ item, currencies }: { item: PublicItem; currencies: 'USD' | 'LBP' | 'BOTH' }) {
-  if (item.sizes.length === 0) {
-    return <bdi dir="ltr" className="pm-price">{priceText(item.price_usd, item.price_lbp, currencies)}</bdi>;
-  }
-  return (
-    <ul className="pm-sizes">
-      {item.sizes.map((s) => (
-        <li key={s.label}>
-          <bdi dir="ltr" className="pm-size">{s.label}</bdi>
-          <bdi dir="ltr" className="pm-price">{priceText(s.price_usd, s.price_lbp, currencies)}</bdi>
-        </li>
-      ))}
-    </ul>
-  );
+  if (item.sizes.length > 0) return <PublicSizes sizes={item.sizes} currencies={currencies} />;
+  return <bdi dir="ltr" className="pm-price">{priceText(item.price_usd, item.price_lbp, currencies)}</bdi>;
 }
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
@@ -55,6 +48,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
 
   return (
     <main className="pm">
+      <RefreshOnReturn />
       <header className="pm-head">
         <h1 dir="auto">{menu.name}</h1>
         {contacts.length > 0 && (
@@ -81,10 +75,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
               <ul className="pm-items">
                 {c.items.map((item, j) => (
                   <li key={j} className="pm-item">
-                    {item.image && (
-                      // eslint-disable-next-line @next/next/no-img-element -- already shrunk when uploaded; no extra optimizer
-                      <img className="pm-photo" src={item.image} alt="" width={84} height={84} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
-                    )}
+                    {item.image && <PublicPhoto src={item.image} />}
                     <div className="pm-info">
                       <b dir="auto">{item.name}</b>
                       {item.description && <p dir="auto">{item.description}</p>}

@@ -246,6 +246,23 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   who just logged in with the new password must not be thrown out). (3) Two requests at the very same moment can
   leave two valid links for the same person; both still expire in 20 minutes and work once.
 
+## The public page for customers
+
+- **Sizes as buttons.** An item with sizes shows ONE price (the first size, in the order the owner set) and a button
+  per size; choosing a size changes the price shown (`src/components/PublicSizes.tsx`). Without JavaScript the first
+  size and its price are still shown.
+- **Photo bigger on a tap.** A tap on a photo opens the same file (already downloaded) in a `<dialog>` over a dark
+  background, closed by the X, a tap outside, or Escape (`PublicPhoto.tsx`). No second download, no extra storage.
+- **Fresh menu when the customer comes back** (`RefreshOnReturn.tsx`): when the customer returns to the tab or unlocks
+  the phone, the page asks once for the fresh menu (at most once every 10 seconds). There is NO timer: a page nobody
+  looks at asks for nothing, so the database, the storage and the server are not loaded for nothing; the data comes
+  from the cache (see above) and the photos from the browser's own cache.
+- **Known small limit:** the page tells items apart by their place in the list. If the owner deletes an item while a
+  customer has the page open (and the customer had chosen a size on it), the next item can show that size after the
+  refresh. A fix needs an id per item and category in the public data (and in the cache); the harm is only a different
+  size on show, one tap to change.
+- Settings: a short note under the map field explains how to copy the link from Google Maps.
+
 ## Item photos (Vercel Blob)
 
 An owner can add a photo to an item (in the add / edit form). Everything about where the files live is in ONE file,
