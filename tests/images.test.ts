@@ -282,6 +282,47 @@ describe('items with a photo', () => {
     expect(storage.forgetImages.mock.calls[0][0]).toEqual([two]);
   });
 
+  it('SEVERAL items may share one photo: the file is deleted only when the LAST item using it lets go', async () => {
+    const { pg, a, cat } = await setup();
+    const shared = url(a.restaurantId, 'shared.webp');
+    await createItem(pg, a.ownerId, input(cat, { name: 'A', imageUrl: shared }));
+    await createItem(pg, a.ownerId, input(cat, { name: 'B', imageUrl: shared }));
+    await createItem(pg, a.ownerId, input(cat, { name: 'C', imageUrl: shared }));
+    expect(await listItems(pg, a.ownerId)).toHaveLength(3); // saving the same link twice is accepted
+    const byName = async (n: string) => (await listItems(pg, a.ownerId)).find((i) => i.name === n)!;
+    expect((await deleteItem(pg, a.ownerId, (await byName('A')).id)).ok).toBe(true);
+    expect((await updateItem(pg, a.ownerId, (await byName('B')).id, input(cat, { name: 'B', imageUrl: url(a.restaurantId, 'own.webp') }))).ok).toBe(true);
+    expect(storage.forgetImages).not.toHaveBeenCalledWith([shared]); // C still uses it: kept
+    expect((await first(pg, a.ownerId)).image_url).not.toBeNull();
+    expect((await deleteItem(pg, a.ownerId, (await byName('C')).id)).ok).toBe(true);
+    expect(storage.forgetImages).toHaveBeenCalledWith([shared]); // nobody uses it now: deleted
+  });
+
+  it('deleting a category keeps a photo that an item of ANOTHER category still uses', async () => {
+    const { pg, a, cat } = await setup();
+    await createCategory(pg, a.ownerId, 'Drinks');
+    const other = (await listCategories(pg, a.ownerId)).find((c) => c.id !== cat)!.id;
+    const shared = url(a.restaurantId, 'shared.webp');
+    const mine = url(a.restaurantId, 'mine.webp');
+    await createItem(pg, a.ownerId, input(cat, { name: 'A', imageUrl: shared }));
+    await createItem(pg, a.ownerId, input(cat, { name: 'B', imageUrl: mine }));
+    await createItem(pg, a.ownerId, input(other, { name: 'D', imageUrl: shared }));
+    expect((await deleteCategory(pg, a.ownerId, cat)).ok).toBe(true);
+    expect(storage.forgetImages).toHaveBeenCalledTimes(1);
+    expect(storage.forgetImages.mock.calls[0][0]).toEqual([mine]); // 'shared' stays: D uses it
+  });
+
+  it('a photo is never shared across RESTAURANTS: the other restaurant\'s items do not keep my file alive', async () => {
+    const { pg, a, b, cat } = await setup();
+    const mine = url(a.restaurantId);
+    await createItem(pg, a.ownerId, input(cat, { imageUrl: mine }));
+    await createCategory(pg, b.ownerId, 'X');
+    const bcat = (await listCategories(pg, b.ownerId))[0].id;
+    await createItem(pg, b.ownerId, input(bcat, { name: 'Other' })); // same name, no photo
+    expect((await deleteItem(pg, a.ownerId, (await first(pg, a.ownerId)).id)).ok).toBe(true);
+    expect(storage.forgetImages).toHaveBeenCalledWith([mine]);
+  });
+
   it('a failing delete of the old file never fails the owner\'s change (forgetImages is best effort)', async () => {
     const { pg, a, cat } = await setup();
     await createItem(pg, a.ownerId, input(cat, { imageUrl: url(a.restaurantId) }));

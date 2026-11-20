@@ -5,7 +5,8 @@ import {
   type Currencies, type Result,
 } from './owner-menu';
 import { DESCRIPTION_MAX, MAX_ITEMS, MAX_SIZES } from './item-limits';
-import { forgetImages, isOwnImageUrl } from './image-storage';
+import { forgetUnusedImages } from './image-cleanup';
+import { isOwnImageUrl } from './image-storage';
 import { hasLetterOrDigit } from './slugify';
 
 // Items and their sizes. Same rules as the rest of the owner code: the restaurant is found from the
@@ -185,7 +186,7 @@ export async function updateItem(db: Db, ownerId: string, itemId: string, input:
   );
   const row = res.rows[0];
   if (!row?.id) return diagnose(db, ownerId, input.categoryId, itemId);
-  if (row.old_image && row.old_image !== v.image) await forgetImages([row.old_image]); // replaced or removed photo
+  if (row.old_image && row.old_image !== v.image) await forgetUnusedImages(db, ownerId, [row.old_image]); // replaced or removed photo
   return { ok: true };
 }
 
@@ -204,7 +205,7 @@ export async function deleteItem(db: Db, ownerId: string, id: string): Promise<R
     [ownerId, id],
   );
   if (res.rows.length === 0) return explain(db, ownerId, fail(404, 'المنتج غير موجود'));
-  await forgetImages([res.rows[0].image_url]);
+  await forgetUnusedImages(db, ownerId, [res.rows[0].image_url]);
   return { ok: true };
 }
 

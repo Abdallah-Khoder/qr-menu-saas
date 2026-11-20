@@ -1,5 +1,5 @@
 import type { Db } from './db';
-import { forgetImages } from './image-storage';
+import { forgetUnusedImages } from './image-cleanup';
 import { parseFacebook, parseInstagram, parseMapUrl, parsePhone } from './owner-input';
 import { hasLetterOrDigit } from './slugify';
 
@@ -157,7 +157,7 @@ export async function deleteCategory(db: Db, ownerId: string, id: string): Promi
     [ownerId, id],
   );
   if (res.rows.length === 0) return explain(db, ownerId, fail(404, 'القسم غير موجود'));
-  await forgetImages(res.rows[0].photos);
+  await forgetUnusedImages(db, ownerId, res.rows[0].photos);
   return { ok: true };
 }
 
