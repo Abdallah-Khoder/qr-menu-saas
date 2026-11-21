@@ -265,7 +265,10 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
 
 ## Item photos (Vercel Blob)
 
-An owner can add a photo to an item (in the add / edit form). Everything about where the files live is in ONE file,
+**Every item has a photo (required).** The add / edit form asks for one and has no "remove photo" button (only
+"change"); the server refuses an item without a photo too (400), so the rule also holds for a direct call. An old item
+that was made without a photo (before this rule) can only be saved again together with a photo. Everything about
+where the files live is in ONE file,
 `src/lib/image-storage.ts`; to use another service later only that file changes.
 
 - **Shrunk in the browser first** (`src/lib/compress-image.ts`): at most 640 px on the long side, WebP (JPEG on old

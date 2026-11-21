@@ -27,7 +27,7 @@ export type ItemInput = {
 };
 
 type Clean = {
-  name: string; description: string; image: string | null; usd: string | null; lbp: string | null;
+  name: string; description: string; image: string; usd: string | null; lbp: string | null;
   labels: string[]; usds: (string | null)[]; lbps: (string | null)[];
 };
 
@@ -41,12 +41,13 @@ function validate(input: ItemInput, currencies: Currencies, restaurantId: string
   if (Array.from(description).length > DESCRIPTION_MAX) {
     return { ok: false, error: `الوصف طويل جدًا (حتى ${DESCRIPTION_MAX} حرفًا)` };
   }
+  // Every item has a photo (also when an old item without one is saved again).
   // The photo must be one WE saved for THIS restaurant (a stranger's link, or a link to any other site, is refused).
-  const imageUrl = input.imageUrl.trim();
-  if (imageUrl !== '' && !isOwnImageUrl(imageUrl, restaurantId)) {
+  const image = input.imageUrl.trim();
+  if (image === '') return { ok: false, error: 'صورة المنتج مطلوبة. اختر صورة للمنتج.' };
+  if (!isOwnImageUrl(image, restaurantId)) {
     return { ok: false, error: 'الصورة غير صالحة. ارفع الصورة من جديد.' };
   }
-  const image = imageUrl === '' ? null : imageUrl;
   const needUsd = currencies === 'USD' || currencies === 'BOTH';
   const needLbp = currencies === 'LBP' || currencies === 'BOTH';
 

@@ -62,6 +62,7 @@ export default function ItemForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!imageUrl) return setError('صورة المنتج مطلوبة. اختر صورة للمنتج.');
     setBusy(true);
     setError('');
     const problem = await postJson(item ? `/api/owner/items/${item.id}/update` : '/api/owner/items', {
@@ -95,7 +96,7 @@ export default function ItemForm({
         )}
 
         <div className="field photo-field">
-          <span>صورة المنتج (اختيارية)</span>
+          <span>صورة المنتج (مطلوبة)</span>
           {imageUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- our own small, already-shrunk photo
             <img className="photo-preview" src={imageUrl} alt="" width={96} height={96} referrerPolicy="no-referrer" />
@@ -105,9 +106,6 @@ export default function ItemForm({
               {uploading ? 'جارٍ رفع الصورة...' : imageUrl ? 'تغيير الصورة' : 'اختيار صورة'}
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhoto} disabled={uploading || !hydrated} className="sr-only" />
             </label>
-            {imageUrl && !uploading && (
-              <button type="button" className="btn ghost small danger" onClick={() => setImageUrl('')}>إزالة الصورة</button>
-            )}
           </div>
         </div>
 

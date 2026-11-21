@@ -221,10 +221,23 @@ describe('items with a photo', () => {
     expect(menu.state === 'ok' && menu.menu.categories[0].items[0].image).toBe(link);
   });
 
-  it('an item without a photo has none (null)', async () => {
+  it('a photo is REQUIRED: an item without one is refused (nothing is saved)', async () => {
     const { pg, a, cat } = await setup();
-    await createItem(pg, a.ownerId, input(cat));
-    expect((await first(pg, a.ownerId)).image_url).toBeNull();
+    for (const imageUrl of ['', '   ']) {
+      expect(await createItem(pg, a.ownerId, input(cat, { imageUrl }))).toEqual({ ok: false, status: 400, error: 'صورة المنتج مطلوبة. اختر صورة للمنتج.' });
+    }
+    expect(await listItems(pg, a.ownerId)).toHaveLength(0);
+  });
+
+  it('an OLD item that has no photo (made before the rule) can only be saved again together with a photo', async () => {
+    const { pg, a, cat } = await setup();
+    await add.item(pg, a.restaurantId, cat, '5'); // made straight in the database, as before the rule
+    const old = await first(pg, a.ownerId);
+    expect(old.image_url).toBeNull();
+    expect(await updateItem(pg, a.ownerId, old.id, input(cat, { name: 'Burger', priceUsd: '6' }))).toMatchObject({ ok: false, status: 400 });
+    expect((await first(pg, a.ownerId)).price_usd).toBe('5.00'); // untouched
+    expect((await updateItem(pg, a.ownerId, old.id, input(cat, { name: 'Burger', priceUsd: '6', imageUrl: url(a.restaurantId) }))).ok).toBe(true);
+    expect((await first(pg, a.ownerId)).image_url).toBe(url(a.restaurantId));
   });
 
   it('REFUSES a link of another restaurant, another site, or one typed by hand (nothing is saved)', async () => {
@@ -237,22 +250,20 @@ describe('items with a photo', () => {
     expect(await listItems(pg, a.ownerId)).toHaveLength(0);
   });
 
-  it('replacing the photo deletes the OLD file; keeping it or adding the first one deletes nothing', async () => {
+  it('replacing the photo deletes the OLD file; keeping it deletes nothing; removing it is refused', async () => {
     const { pg, a, cat } = await setup();
     const one = url(a.restaurantId, 'one.webp');
     const two = url(a.restaurantId, 'two.webp');
-    await createItem(pg, a.ownerId, input(cat));
+    await createItem(pg, a.ownerId, input(cat, { imageUrl: one }));
     const id = (await first(pg, a.ownerId)).id;
-    expect((await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: one }))).ok).toBe(true); // first photo
-    expect(storage.forgetImages).not.toHaveBeenCalled();
     expect((await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: one, name: 'Renamed' }))).ok).toBe(true); // same photo
     expect(storage.forgetImages).not.toHaveBeenCalled();
     expect((await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: two }))).ok).toBe(true); // replaced
     expect(storage.forgetImages).toHaveBeenCalledWith([one]);
     storage.forgetImages.mockClear();
-    expect((await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: '' }))).ok).toBe(true); // removed
-    expect(storage.forgetImages).toHaveBeenCalledWith([two]);
-    expect((await first(pg, a.ownerId)).image_url).toBeNull();
+    expect(await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: '' }))).toMatchObject({ ok: false, status: 400 }); // removing is refused
+    expect(storage.forgetImages).not.toHaveBeenCalled();
+    expect((await first(pg, a.ownerId)).image_url).toBe(two); // the photo stays
   });
 
   it('a refused update (bad link) keeps the old photo and deletes nothing', async () => {
@@ -271,7 +282,8 @@ describe('items with a photo', () => {
     const two = url(a.restaurantId, 'two.webp');
     await createItem(pg, a.ownerId, input(cat, { name: 'A', imageUrl: one }));
     await createItem(pg, a.ownerId, input(cat, { name: 'B', imageUrl: two }));
-    await createItem(pg, a.ownerId, input(cat, { name: 'C' }));
+    const three = url(a.restaurantId, 'three.webp');
+    await createItem(pg, a.ownerId, input(cat, { name: 'C', imageUrl: three }));
     const items = await listItems(pg, a.ownerId);
     const withOne = items.find((i) => i.name === 'A')!;
     expect((await deleteItem(pg, a.ownerId, withOne.id)).ok).toBe(true);
@@ -279,7 +291,7 @@ describe('items with a photo', () => {
     storage.forgetImages.mockClear();
     expect((await deleteCategory(pg, a.ownerId, cat)).ok).toBe(true);
     expect(storage.forgetImages).toHaveBeenCalledTimes(1);
-    expect(storage.forgetImages.mock.calls[0][0]).toEqual([two]);
+    expect([...storage.forgetImages.mock.calls[0][0]].sort()).toEqual([three, two]); // B's and C's photos
   });
 
   it('SEVERAL items may share one photo: the file is deleted only when the LAST item using it lets go', async () => {
@@ -318,7 +330,7 @@ describe('items with a photo', () => {
     await createItem(pg, a.ownerId, input(cat, { imageUrl: mine }));
     await createCategory(pg, b.ownerId, 'X');
     const bcat = (await listCategories(pg, b.ownerId))[0].id;
-    await createItem(pg, b.ownerId, input(bcat, { name: 'Other' })); // same name, no photo
+    await createItem(pg, b.ownerId, input(bcat, { name: 'Other', imageUrl: url(b.restaurantId) })); // their own photo, same file name
     expect((await deleteItem(pg, a.ownerId, (await first(pg, a.ownerId)).id)).ok).toBe(true);
     expect(storage.forgetImages).toHaveBeenCalledWith([mine]);
   });
@@ -328,6 +340,6 @@ describe('items with a photo', () => {
     await createItem(pg, a.ownerId, input(cat, { imageUrl: url(a.restaurantId) }));
     const id = (await first(pg, a.ownerId)).id;
     storage.forgetImages.mockResolvedValue(undefined);
-    expect((await updateItem(pg, a.ownerId, id, input(cat))).ok).toBe(true);
+    expect((await updateItem(pg, a.ownerId, id, input(cat, { imageUrl: url(a.restaurantId, 'new.webp') }))).ok).toBe(true);
   });
 });
