@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { add, count, makeDb } from './helpers';
+import { TEST_BLOB_HOST, add, count, makeDb, photoUrl } from './helpers';
 import { parseLbp, parseUsd } from '../src/lib/owner-input';
 import { MAX_ITEMS, createItem, deleteItem, listItems, moveItem, setItemAvailable, updateItem, type ItemInput } from '../src/lib/owner-items';
 import { listMissingPrices, fillPrices } from '../src/lib/owner-prices';
@@ -29,10 +29,15 @@ describe('price parsers', () => {
   });
 });
 
+beforeEach(() => vi.stubEnv('BLOB_PUBLIC_HOST', TEST_BLOB_HOST));
+afterEach(() => vi.unstubAllEnvs());
+
+let photo = ''; // the photo link of the restaurant made by the latest setup() (every item needs a photo)
 async function setup(currencies: 'USD' | 'LBP' | 'BOTH' = 'USD') {
   const pg = await makeDb();
   const a = await add.tenant(pg, 'alpha');
   const b = await add.tenant(pg, 'beta');
+  photo = photoUrl(a.restaurantId);
   await pg.query(`UPDATE restaurants SET currencies = $1 WHERE id = $2`, [currencies, a.restaurantId]);
   await createCategory(pg, a.ownerId, 'Burgers');
   await createCategory(pg, a.ownerId, 'Drinks');
@@ -42,7 +47,7 @@ async function setup(currencies: 'USD' | 'LBP' | 'BOTH' = 'USD') {
   return { pg, a, b, burgers: burgers.id, drinks: drinks.id, theirs: theirs.id };
 }
 const input = (categoryId: string, over: Partial<ItemInput> = {}): ItemInput => ({
-  categoryId, name: 'Cheese burger', description: '', available: true, imageUrl: '', priceUsd: '5', priceLbp: '', sizes: [], ...over,
+  categoryId, name: 'Cheese burger', description: '', available: true, imageUrl: photo, priceUsd: '5', priceLbp: '', sizes: [], ...over,
 });
 const sizes = (...rows: [string, string, string][]) => rows.map(([label, priceUsd, priceLbp]) => ({ label, priceUsd, priceLbp }));
 const names = async (pg: PGlite, ownerId: string) => (await listItems(pg, ownerId)).map((i) => i.name);
@@ -175,7 +180,7 @@ describe('updateItem', () => {
   });
   it("cannot touch another restaurant's item, nor move an item into another restaurant's category", async () => {
     const { pg, a, b, burgers, theirs } = await setup();
-    await createItem(pg, b.ownerId, input(theirs, { name: 'Theirs' }));
+    await createItem(pg, b.ownerId, input(theirs, { name: 'Theirs', imageUrl: photoUrl(b.restaurantId) })); // a photo of THEIR folder
     await createItem(pg, a.ownerId, input(burgers, { name: 'Mine' }));
     const [mine] = await listItems(pg, a.ownerId);
     const [other] = await listItems(pg, b.ownerId);

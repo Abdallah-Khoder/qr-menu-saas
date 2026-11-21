@@ -1,18 +1,22 @@
-import { describe, expect, it } from 'vitest';
-import { add, makeDb } from './helpers';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TEST_BLOB_HOST, add, makeDb, photoUrl } from './helpers';
 import { callUrl, getPublicMenu, whatsappUrl } from '../src/lib/public-menu';
 import { createCategory, listCategories, saveSettings } from '../src/lib/owner-menu';
 import { createItem, listItems, setItemAvailable, type ItemInput } from '../src/lib/owner-items';
 
 const SLUG = 'alpha-k3x9qp7vtz';
+beforeEach(() => vi.stubEnv('BLOB_PUBLIC_HOST', TEST_BLOB_HOST));
+afterEach(() => vi.unstubAllEnvs());
+let photo = ''; // the photo link of the restaurant made by the latest setup() (every item needs a photo)
 const input = (categoryId: string, over: Partial<ItemInput> = {}): ItemInput => ({
-  categoryId, name: 'Burger', description: '', available: true, imageUrl: '', priceUsd: '5', priceLbp: '', sizes: [], ...over,
+  categoryId, name: 'Burger', description: '', available: true, imageUrl: photo, priceUsd: '5', priceLbp: '', sizes: [], ...over,
 });
 
 async function setup() {
   const pg = await makeDb();
   const a = await add.tenant(pg, 'alpha');
   const b = await add.tenant(pg, 'beta');
+  photo = photoUrl(a.restaurantId);
   await createCategory(pg, a.ownerId, 'Burgers');
   await createCategory(pg, a.ownerId, 'Drinks');
   await createCategory(pg, a.ownerId, 'Empty');

@@ -70,3 +70,8 @@ export const add = {
 
 export const count = async (pg: PGlite, table: string) =>
   (await pg.query<{ n: number }>(`SELECT COUNT(*)::int AS n FROM ${table}`)).rows[0].n;
+
+/** The address of the (fake) image store used by tests: set BLOB_PUBLIC_HOST to it with vi.stubEnv. */
+export const TEST_BLOB_HOST = 'store1.public.blob.vercel-storage.com';
+/** A photo link that the app accepts for this restaurant (every item needs one). */
+export const photoUrl = (restaurantId: string, name = 'item-Ab12.webp') => `https://${TEST_BLOB_HOST}/restaurants/${restaurantId}/${name}`;
