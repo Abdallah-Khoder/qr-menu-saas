@@ -117,6 +117,14 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
     expect(tabs).not.toContain('overflow-x');
     expect(tabs).not.toContain('sticky');
   });
+  it('entrance animations use "backwards", never "both": a kept end value would block the press and hover effects', () => {
+    const entrances = [...css.matchAll(/animation:\s*pm-(?:rise|pop-in)[^;]*;/g)].map((m) => m[0]);
+    expect(entrances).toHaveLength(4); // the name, the icons, the section chips, the cards
+    for (const a of entrances) {
+      expect(a).toContain('backwards');
+      expect(a).not.toMatch(/\bboth\b/);
+    }
+  });
   it('every entrance animation is switched off for people who asked for less motion', () => {
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
     for (const name of ['.pm-icon', '.pm-tabs a', '.pm-item', '.pm-head h1']) expect(reduced, name).toContain(name);

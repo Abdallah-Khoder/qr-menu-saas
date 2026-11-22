@@ -221,13 +221,15 @@ html { scroll-behavior: smooth; }
 }
 .pm-cat { scroll-margin-top: 12px; margin-top: 18px; }
 /* a light entrance: the name, the icons, the sections and the first cards rise in one after the other (--i is the
-   place in the row, capped at 8 so nothing waits long). Only opacity and transform move: no layout work. */
+   place in the row, capped at 8 so nothing waits long). Only opacity and transform move: no layout work.
+   "backwards" (not "both"): the hidden start is kept during the delay, but after the entrance the animation lets go of
+   transform, so the press and hover effects below still work (a kept animation value would override them). */
 @keyframes pm-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes pm-pop-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
-.pm-head h1 { animation: pm-rise .4s ease-out both; }
-.pm-icon { animation: pm-pop-in .35s ease-out both; animation-delay: calc(var(--i, 0) * 60ms); }
-.pm-tabs a { animation: pm-rise .35s ease-out both; animation-delay: calc(var(--i, 0) * 30ms); }
-.pm-item { animation: pm-rise .4s ease-out both; animation-delay: calc(var(--i, 0) * 45ms); }
+.pm-head h1 { animation: pm-rise .4s ease-out backwards; }
+.pm-icon { animation: pm-pop-in .35s ease-out backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+.pm-tabs a { animation: pm-rise .35s ease-out backwards; animation-delay: calc(var(--i, 0) * 30ms); }
+.pm-item { animation: pm-rise .4s ease-out backwards; animation-delay: calc(var(--i, 0) * 45ms); }
 .pm-cat h2 { font-size: 1.25rem; margin: 0 0 8px; color: var(--brand); }
 /* the items are a grid of cards: 2 across on a phone, 3 on a tablet, 4 on a laptop; a row's cards are equally tall */
 .pm-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
