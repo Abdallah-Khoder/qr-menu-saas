@@ -10,6 +10,7 @@ const Body = z.object({
   instagram: z.string().max(1000),
   facebook: z.string().max(1000),
   tiktok: z.string().max(1000),
+  direction: z.enum(['rtl', 'ltr']).optional(),
 });
 
 export async function POST(request: Request) {

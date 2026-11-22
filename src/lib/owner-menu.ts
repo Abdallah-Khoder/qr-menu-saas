@@ -13,18 +13,20 @@ export const MAX_CATEGORIES = 50;
 export const NAME_MAX = 80;
 
 export type Currencies = 'USD' | 'LBP' | 'BOTH';
+export type Direction = 'rtl' | 'ltr'; // which way the public menu reads
+export const isDirection = (v: unknown): v is Direction => v === 'rtl' || v === 'ltr';
 export type Result = { ok: true } | { ok: false; status: number; error: string };
 export const fail = (status: number, error: string): Result => ({ ok: false, status, error });
 
 export type OwnerRestaurant = {
   id: string; name: string; public_slug: string; status: 'active' | 'suspended';
   currencies: Currencies; phone_number: string | null; map_url: string | null;
-  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null;
+  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null; menu_direction: Direction;
 };
 
 export async function getOwnerRestaurant(db: Db, ownerId: string): Promise<OwnerRestaurant | null> {
   const res = await db.query(
-    `SELECT id, name, public_slug, status, currencies, phone_number, map_url, instagram_url, facebook_url, tiktok_url FROM restaurants WHERE owner_id = $1`,
+    `SELECT id, name, public_slug, status, currencies, phone_number, map_url, instagram_url, facebook_url, tiktok_url, menu_direction FROM restaurants WHERE owner_id = $1`,
     [ownerId],
   );
   return res.rows[0] ?? null;
@@ -55,14 +57,17 @@ function checkName(raw: string, what: string): { ok: true; name: string } | { ok
  * so links already printed on tables keep working.
  * Choosing a currency is refused while some item or size has no price in it: the same statement
  * counts them and only updates when there are none.
+ * `direction` is optional: a settings page that was opened before this field existed still saves, and the
+ * restaurant keeps the direction it has.
  */
 export async function saveSettings(
   db: Db,
   ownerId: string,
-  input: { name: string; currencies: Currencies; phone: string; mapUrl: string; instagram: string; facebook: string; tiktok: string },
+  input: { name: string; currencies: Currencies; phone: string; mapUrl: string; instagram: string; facebook: string; tiktok: string; direction?: Direction },
 ): Promise<Result> {
   const name = checkName(input.name, 'اسم المطعم');
   if (!name.ok) return fail(400, name.error);
+  if (input.direction !== undefined && !isDirection(input.direction)) return fail(400, 'اتجاه القائمة غير صالح');
   const phone = parsePhone(input.phone);
   if (!phone.ok) return fail(400, phone.error);
   const map = parseMapUrl(input.mapUrl);
@@ -90,13 +95,13 @@ export async function saveSettings(
      ),
      upd AS (
        UPDATE restaurants SET name = $3, currencies = $2::text, phone_number = $4, map_url = $5,
-           instagram_url = $6, facebook_url = $7, tiktok_url = $8
+           instagram_url = $6, facebook_url = $7, tiktok_url = $8, menu_direction = COALESCE($9::text, menu_direction)
        WHERE id = (SELECT id FROM r) AND (SELECT n FROM missing) = 0
        RETURNING id
      )
      SELECT (SELECT id FROM r) AS restaurant_id, (SELECT n FROM missing)::int AS missing,
             EXISTS (SELECT 1 FROM upd) AS updated`,
-    [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value, tiktok.value],
+    [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value, tiktok.value, input.direction ?? null],
   );
   const row = res.rows[0];
   if (!row?.restaurant_id) return explain(db, ownerId, fail(404, 'المطعم غير موجود'));

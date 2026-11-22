@@ -92,6 +92,13 @@ describe('getPublicMenu', () => {
     expect(await menuOf(pg)).toMatchObject({ phone: null, instagram: null, tiktok: 'https://www.tiktok.com/@alpha.food' });
   });
 
+  it('gives the direction the owner chose (right to left until he changes it)', async () => {
+    const { pg, a } = await setup();
+    expect(await menuOf(pg)).toMatchObject({ direction: 'rtl' });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '', direction: 'ltr' });
+    expect(await menuOf(pg)).toMatchObject({ direction: 'ltr' });
+  });
+
   it('prices come back as exact text', async () => {
     const { pg, a, burgers } = await setup();
     await createItem(pg, a.ownerId, input(burgers, { name: 'X', priceUsd: '5' }));

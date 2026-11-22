@@ -271,6 +271,7 @@ html { scroll-behavior: smooth; }
 .pm-sized .pm-price { align-self: stretch; } /* the sized price takes the whole row too, so its two amounts sit at the two ends */
 /* the page is right-to-left, but sizes (S M L) read left to right, so the row is forced ltr */
 .pm-size-btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; direction: ltr; }
+.pm[dir="ltr"] .pm-size-btns { justify-content: flex-start; } /* an English menu reads from the left, so the sizes line up with the names */
 .pm-size-btn { font: inherit; min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; transition: background-color .18s, border-color .18s, color .18s, transform .12s; }
 .pm-size-btn:active { transform: scale(.92); }
 .pm-size-btn[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); font-weight: 700; }

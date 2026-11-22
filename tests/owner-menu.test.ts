@@ -148,6 +148,23 @@ describe('saveSettings', () => {
     expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ tiktok_url: 'https://www.tiktok.com/@alpha.food' });
     expect(await saveSettings(pg, a.ownerId, settings({ instagram: 'https://evil.com/x' }))).toMatchObject({ ok: false, status: 400 });
   });
+  it('menu direction: right to left at first, the owner can change it (his restaurant only), and a missing or bad value changes nothing', async () => {
+    const { pg, a, b } = await setup();
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ menu_direction: 'rtl' });
+    expect(await saveSettings(pg, a.ownerId, settings({ direction: 'ltr' }))).toEqual({ ok: true });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ menu_direction: 'ltr' });
+    expect(await getOwnerRestaurant(pg, b.ownerId)).toMatchObject({ menu_direction: 'rtl' }); // the other restaurant is untouched
+    // a settings page opened before this field existed sends no direction: the restaurant keeps its own
+    expect(await saveSettings(pg, a.ownerId, settings({ name: 'Another name' }))).toEqual({ ok: true });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ name: 'Another name', menu_direction: 'ltr' });
+    // anything else is refused before it reaches the database, and the database refuses it too
+    expect(await saveSettings(pg, a.ownerId, settings({ direction: 'up' }))).toMatchObject({ ok: false, status: 400 });
+    expect(await saveSettings(pg, a.ownerId, settings({ direction: '' }))).toMatchObject({ ok: false, status: 400 });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ menu_direction: 'ltr' });
+    await expect(pg.query(`UPDATE restaurants SET menu_direction = 'up'`)).rejects.toThrow();
+    expect(await saveSettings(pg, a.ownerId, settings({ direction: 'rtl' }))).toEqual({ ok: true });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ menu_direction: 'rtl' });
+  });
   it('does not touch another restaurant', async () => {
     const { pg, a, b } = await setup();
     await saveSettings(pg, a.ownerId, settings({ name: 'Changed' }));

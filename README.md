@@ -183,6 +183,12 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   "هذه القائمة غير متاحة حاليًا" and its items are not even read from the database.
 - **Bad links:** a link that does not look like a real one (`[a-z0-9-]`, up to 60 characters) gives 404
   without asking the database; an unknown link gives the same 404.
+- **Menu direction:** the owner chooses in the settings whether his menu reads right to left (Arabic, the default) or
+  left to right (English): `restaurants.menu_direction` (`'rtl'` or `'ltr'`, a database CHECK refuses anything else,
+  migration 009). The public page puts it on `<main dir>`, so the grid, the sections, the prices and the floating buttons
+  all flip together. Names are wrapped in `<bdi>` (not `dir="auto"`), so a name in the other language or with
+  punctuation never breaks the line, and every name stays on the same side of its card. The setting is optional in
+  the API: a settings page that was opened before the field existed still saves and keeps the restaurant's direction.
 - **Contact icons:** round icon buttons for WhatsApp (`wa.me`, digits only), Instagram, Facebook, TikTok and the map
   (no call button: customers reach the restaurant on WhatsApp). Only the ones the owner filled in. External links
   open in a new tab with `rel="noopener noreferrer"`. The four brand glyphs are inline SVG from
