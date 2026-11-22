@@ -39,17 +39,9 @@ export default async function RestaurantsPage() {
                     />
                     <RowAction
                       url={`/api/admin/restaurants/${r.id}/delete`}
-                      body={{ withAccount: false }}
-                      label="حذف المطعم"
-                      confirm={`سيُحذف مطعم «${r.name}» وقائمته بالكامل، ويبقى حساب صاحبه. لا يمكن التراجع. هل تريد المتابعة؟`}
-                      confirmLabel="نعم، احذف"
-                      danger
-                    />
-                    <RowAction
-                      url={`/api/admin/restaurants/${r.id}/delete`}
                       body={{ withAccount: true }}
-                      label="حذف الحساب"
-                      confirm={`سيُحذف حساب ${r.owner_email} ومطعمه وقائمته بالكامل. لا يمكن التراجع. هل تريد المتابعة؟`}
+                      label="حذف المطعم والحساب"
+                      confirm={`سيُحذف مطعم «${r.name}» بقائمته كاملةً (الأقسام والمنتجات)، وحساب ${r.owner_email} نهائيًا. لا يمكن التراجع. بعد الحذف يمكنك دعوة هذا البريد من جديد. هل تريد المتابعة؟`}
                       confirmLabel="نعم، احذف"
                       danger
                     />

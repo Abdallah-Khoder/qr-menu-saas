@@ -40,9 +40,11 @@ Design decisions worth knowing:
 - **Prices are `NUMERIC(12,2)`**: exact decimals, never floating point. A restaurant shows dollars,
   Lebanese pounds, or both (`currencies`), so items and sizes have `price_usd` and `price_lbp`.
 - **Secrets are hashes.** Passwords, invite tokens and email codes are never stored as-is.
-- **Account and restaurant are different things.** One restaurant per account (`UNIQUE owner_id`;
-  drop it later to allow several). Deleting a restaurant keeps the account; deleting the account
-  deletes its restaurant and everything in it.
+- **Account and restaurant go together.** One restaurant per account (`UNIQUE owner_id`;
+  drop it later to allow several). The admin has ONE delete: it removes the account and, with it, the
+  restaurant, categories, items, sizes and codes (all `ON DELETE CASCADE`). The same email can then be invited
+  again. A "delete the restaurant only" button used to exist; it was removed because it left an account that
+  could not make a new restaurant, could not be re-invited and was not listed, so nobody could delete it.
 - **Public link** = readable name + 10 random characters, e.g. `shaarcrepe-k3x9qp7vtz`.
 - **One phone number** (international format) serves both the call and the WhatsApp button.
 - **Names and descriptions are free text in any language**, so the owner types what he wants

@@ -4,11 +4,11 @@ import { getCurrentUser } from '@/lib/current-user';
 import { getDb } from '@/lib/db';
 import { forgetRestaurantImages } from '@/lib/image-storage';
 import { refreshMenu, slugOfRestaurant } from '@/lib/public-cache';
-import { deleteOwnerAccount, deleteRestaurant } from '@/lib/restaurants-admin';
+import { deleteOwnerAccount } from '@/lib/restaurants-admin';
 
-// withAccount: false = delete the restaurant only (the owner can log in and start again);
-//              true  = delete the owner's account too.
-const Body = z.object({ withAccount: z.boolean() });
+// The only delete is "restaurant AND account". withAccount must be exactly true: an old open admin page that
+// still sends false (the removed "restaurant only" button) gets a 400 instead of deleting more than it asked.
+const Body = z.object({ withAccount: z.literal(true) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = checkAdminRequest(request, await getCurrentUser());
@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (body instanceof Response) return body;
   const db = getDb();
   const slug = await slugOfRestaurant(db, id.data); // asked first: after the delete the row is gone
-  const done = body.withAccount ? await deleteOwnerAccount(db, id.data) : await deleteRestaurant(db, id.data);
+  const done = await deleteOwnerAccount(db, id.data);
   if (!done) return notFound();
   refreshMenu(slug);
   await forgetRestaurantImages(id.data); // best effort: the photos of the deleted restaurant
