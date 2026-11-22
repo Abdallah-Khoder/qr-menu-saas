@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import PublicPhoto from '../src/components/PublicPhoto';
 import PublicSizes from '../src/components/PublicSizes';
 import { pickSize } from '../src/lib/pick-size';
+import { priceParts, priceText } from '../src/lib/price';
 
 // What the server sends before any JavaScript runs: the customer sees the right thing at once.
 const sizes = [
@@ -26,7 +28,8 @@ describe('item sizes on the public page', () => {
     const html = renderToStaticMarkup(createElement(PublicSizes, {
       sizes: [{ label: 'S', price_usd: '4.00', price_lbp: '360000' }], currencies: 'BOTH',
     }));
-    expect(html).toContain('$4.00 · 360,000 ل.ل');
+    // each amount is its own piece: the first is the main price, the second the smaller one, side by side or one under the other
+    expect(html).toContain('<bdi dir="ltr" class="pm-amt">$4.00</bdi><bdi dir="ltr" class="pm-amt">360,000 ل.ل</bdi>');
   });
 });
 
@@ -56,5 +59,20 @@ describe('item photo on the public page', () => {
   });
   it('never sends the page address to the image host', () => {
     expect((html.match(/referrerPolicy="no-referrer"|referrerpolicy="no-referrer"/gi) ?? []).length).toBe(2);
+  });
+});
+
+describe('a price on a narrow card (320 px) never runs out of the card', () => {
+  it('priceParts gives one piece per currency and priceText still joins them with a dot', () => {
+    expect(priceParts('25', '2250000', 'BOTH')).toEqual(['$25.00', '2,250,000 ل.ل']);
+    expect(priceParts('25', '2250000', 'USD')).toEqual(['$25.00']);
+    expect(priceParts('25', '2250000', 'LBP')).toEqual(['2,250,000 ل.ل']);
+    expect(priceText('25', '2250000', 'BOTH')).toBe('$25.00 · 2,250,000 ل.ل');
+  });
+  it('the CSS lets the price wrap: the amounts sit at the two ends of a row that wraps, and none grows past the card (a no-wrap price was the bug)', () => {
+    const css = readFileSync('src/app/globals.css', 'utf8');
+    expect(css).toMatch(/\.pm-price\s*\{[^}]*flex-wrap:\s*wrap[^}]*justify-content:\s*space-between/);
+    expect(css).toMatch(/\.pm-amt\s*\{[^}]*max-width:\s*100%/);
+    expect(css).not.toMatch(/\.pm-(price|amt)\s*\{[^}]*white-space:\s*nowrap/);
   });
 });

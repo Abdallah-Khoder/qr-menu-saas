@@ -6,7 +6,7 @@ import PublicSizes from '@/components/PublicSizes';
 import RefreshOnReturn from '@/components/RefreshOnReturn';
 import { getCachedPublicMenu } from '@/lib/public-cache';
 import { callUrl, whatsappUrl, type PublicItem } from '@/lib/public-menu';
-import { priceText } from '@/lib/price';
+import PriceAmounts from '@/components/PriceAmounts';
 
 // The page a customer opens by scanning the QR code: no login, and the menu is readable without JavaScript (the
 // size buttons, the big photo and the refresh when coming back are small extras). The menu comes from the
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 function Price({ item, currencies }: { item: PublicItem; currencies: 'USD' | 'LBP' | 'BOTH' }) {
   if (item.sizes.length > 0) return <PublicSizes sizes={item.sizes} currencies={currencies} />;
-  return <bdi dir="ltr" className="pm-price">{priceText(item.price_usd, item.price_lbp, currencies)}</bdi>;
+  return <div className="pm-price"><PriceAmounts usd={item.price_usd} lbp={item.price_lbp} currencies={currencies} /></div>;
 }
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
