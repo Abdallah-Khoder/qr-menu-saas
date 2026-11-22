@@ -222,7 +222,11 @@ html { scroll-behavior: smooth; }
 .pm-photo { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--line); }
 .pm-info p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
 .pm-info b { overflow-wrap: anywhere; }
-.pm-price { font-weight: 700; white-space: nowrap; }
+.pm-price { font-weight: 700; }
+/* each amount is one block that moves to the next line whole; only if even alone it is wider than the card does it wrap inside, so a price never runs out of a narrow card */
+.pm-amt { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+/* on the narrowest phones (320 px) the card is about 116 px wide: a slightly smaller price keeps "13,500,000 ل.ل" on one line */
+@media (max-width: 359px) { .pm-price { font-size: .85rem; } }
 .pm-sized { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 /* the page is right-to-left, but sizes (S M L) read left to right, so the row is forced ltr */
 .pm-size-btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; direction: ltr; }

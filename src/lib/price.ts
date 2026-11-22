@@ -8,10 +8,15 @@ export function formatLbp(value: string): string {
   return `${Math.round(Number(value)).toLocaleString('en-US')} ل.ل`;
 }
 
-/** The price line of an item or size, only in the currencies the restaurant uses. */
-export function priceText(usd: string | null, lbp: string | null, currencies: 'USD' | 'LBP' | 'BOTH'): string {
+/** The amounts of an item or size, only in the currencies the restaurant uses: ["$4.00", "360,000 ل.ل"]. */
+export function priceParts(usd: string | null, lbp: string | null, currencies: 'USD' | 'LBP' | 'BOTH'): string[] {
   const parts: string[] = [];
   if (currencies !== 'LBP' && usd !== null) parts.push(formatUsd(usd));
   if (currencies !== 'USD' && lbp !== null) parts.push(formatLbp(lbp));
-  return parts.join(' · ');
+  return parts;
+}
+
+/** The price line of an item or size, only in the currencies the restaurant uses. */
+export function priceText(usd: string | null, lbp: string | null, currencies: 'USD' | 'LBP' | 'BOTH'): string {
+  return priceParts(usd, lbp, currencies).join(' · ');
 }
