@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache, type CSSProperties } from 'react';
+import FloatingContacts from '@/components/FloatingContacts';
 import PublicContacts from '@/components/PublicContacts';
 import PublicPhoto from '@/components/PublicPhoto';
 import PublicSizes from '@/components/PublicSizes';
 import RefreshOnReturn from '@/components/RefreshOnReturn';
 import { getCachedPublicMenu } from '@/lib/public-cache';
+import { contactLinks } from '@/lib/contact-links';
 import { type PublicItem } from '@/lib/public-menu';
 import PriceAmounts from '@/components/PriceAmounts';
 
@@ -43,6 +45,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
     );
   }
   const { menu } = result;
+  const links = contactLinks({ phone: menu.phone, instagram: menu.instagram, facebook: menu.facebook, tiktok: menu.tiktok, mapUrl: menu.mapUrl });
   return (
     <main className="pm">
       <RefreshOnReturn />
@@ -79,6 +82,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
           ))}
         </>
       )}
+      <FloatingContacts links={links} />
     </main>
   );
 }

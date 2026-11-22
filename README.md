@@ -188,6 +188,12 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   open in a new tab with `rel="noopener noreferrer"`. The four brand glyphs are inline SVG from
   [Simple Icons](https://simpleicons.org) (CC0); the logos belong to their companies and are used only to link to the
   restaurant's own page.
+- **Floating buttons:** after the person scrolls past the header, a "back to top" arrow and the contact links float over
+  the page (the sections bar is no longer fixed, so the arrow is the way back to it). On a phone or tablet the contact
+  links are ONE round button that opens the icons upwards (five icons in a column would cover the dishes); on a screen of
+  1200px or more the column of icons is always open in the empty margin beside the page. One list of links
+  (`contactLinks`) feeds both these and the icons under the name. They hide with `translate`, not `transform`, so the
+  press effect still works.
 - **Sections bar:** the section chips wrap onto more lines when there are many (no sideways scrolling). It is not
   sticky any more: a bar of several lines would cover too much of a phone screen.
 - **Motion:** light CSS animations (the name, the icons, the chips and the first cards rise in; icons and chips react
