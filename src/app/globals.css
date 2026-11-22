@@ -223,7 +223,7 @@ html { scroll-behavior: smooth; }
 /* Floating buttons: they appear once the person has scrolled (data-show) and never use "transform" to hide, only "translate",
    so the press effect on the icons (a transform) still works. */
 .pm-float, .pm-top { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30; }
-.pm-float { inset-inline-end: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; visibility: hidden; opacity: 0; translate: 0 12px; transition: opacity .25s, translate .25s, visibility 0s .25s; }
+.pm-float { inset-inline-end: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; visibility: hidden; opacity: 0; translate: 0 12px; pointer-events: none; transition: opacity .25s, translate .25s, visibility 0s .25s; }
 .pm-float[data-show="true"] { visibility: visible; opacity: 1; translate: none; transition-delay: 0s; }
 .pm-float-toggle, .pm-top { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--brand); color: var(--on-brand); cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .28); transition: background-color .18s, transform .15s; }
 .pm-float-toggle { width: 54px; height: 54px; }
@@ -233,6 +233,7 @@ html { scroll-behavior: smooth; }
 .pm-top { inset-inline-start: 16px; width: 46px; height: 46px; visibility: hidden; opacity: 0; translate: 0 12px; transition: opacity .25s, translate .25s, visibility 0s .25s, transform .15s; }
 .pm-top[data-show="true"] { visibility: visible; opacity: 1; translate: none; transition-delay: 0s; }
 .pm-float-links { display: flex; flex-direction: column; gap: 10px; }
+.pm-float-toggle, .pm-float-icon { pointer-events: auto; }
 /* phone and tablet: the icons stay hidden until the round button is pressed, then rise one after the other (nearest the button first) */
 .pm-float-icon { animation: none; background: var(--brand); color: var(--on-brand); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); visibility: hidden; opacity: 0; translate: 0 10px; scale: .8; transition: opacity .2s, translate .2s, scale .2s, visibility 0s .2s, background-color .18s, color .18s, transform .15s; }
 .pm-float[data-open="true"] .pm-float-icon { visibility: visible; opacity: 1; translate: none; scale: 1; transition-delay: calc((var(--n) - 1 - var(--i)) * 40ms), calc((var(--n) - 1 - var(--i)) * 40ms), calc((var(--n) - 1 - var(--i)) * 40ms), 0s, 0s, 0s, 0s; }

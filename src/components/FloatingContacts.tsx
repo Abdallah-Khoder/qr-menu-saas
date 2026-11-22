@@ -47,7 +47,7 @@ export default function FloatingContacts({ links }: { links: ContactLink[] }) {
 
   function toTop() {
     const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({ top: 0, behavior: calm ? 'auto' : 'smooth' });
+    window.scrollTo({ top: 0, behavior: calm ? 'instant' : 'smooth' });
   }
 
   return (

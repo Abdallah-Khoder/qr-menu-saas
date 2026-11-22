@@ -174,4 +174,12 @@ describe('floating buttons', () => {
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
     for (const name of ['.pm-float', '.pm-float-icon', '.pm-float-toggle', '.pm-top']) expect(reduced, name).toContain(name);
   });
+  it('the empty box around the hidden icons never swallows taps meant for the dishes underneath', () => {
+    expect(css).toMatch(/\.pm-float \{[^}]*pointer-events:\s*none/);
+    expect(css).toMatch(/\.pm-float-toggle, \.pm-float-icon \{\s*pointer-events:\s*auto/);
+  });
+  it('the back-to-top arrow scrolls smoothly, but at once for people who asked for less motion', () => {
+    const src = readFileSync('src/components/FloatingContacts.tsx', 'utf8');
+    expect(src).toContain("behavior: calm ? 'instant' : 'smooth'"); // 'auto' would still follow html { scroll-behavior: smooth }
+  });
 });
