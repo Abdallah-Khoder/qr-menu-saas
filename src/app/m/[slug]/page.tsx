@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 function Price({ item, currencies }: { item: PublicItem; currencies: 'USD' | 'LBP' | 'BOTH' }) {
   if (item.sizes.length > 0) return <PublicSizes sizes={item.sizes} currencies={currencies} />;
-  return <bdi dir="ltr" className="pm-price"><PriceAmounts usd={item.price_usd} lbp={item.price_lbp} currencies={currencies} /></bdi>;
+  return <div className="pm-price"><PriceAmounts usd={item.price_usd} lbp={item.price_lbp} currencies={currencies} /></div>;
 }
 
 const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
