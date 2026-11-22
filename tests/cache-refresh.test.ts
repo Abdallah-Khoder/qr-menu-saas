@@ -127,16 +127,26 @@ describe('admin actions refresh the cached public menu', () => {
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
   });
 
-  it('deleting the restaurant, or the whole account (the link is read BEFORE the row disappears)', async () => {
+  it('deleting a restaurant (with its account) refreshes its link, which is read BEFORE the row disappears', async () => {
     const { a, b, admin } = await setup();
     mocks.user.current = { id: admin, email: 'r@example.com', role: 'super_admin' };
-    expect((await deleteRestaurant(json({ withAccount: false }), ctx(a.restaurantId))).status).toBe(200);
+    expect((await deleteRestaurant(json({ withAccount: true }), ctx(a.restaurantId))).status).toBe(200);
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
     mocks.revalidateTag.mockReset();
     expect((await deleteRestaurant(json({ withAccount: true }), ctx(b.restaurantId))).status).toBe(200);
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:beta-k3x9qp7vtz', { expire: 0 });
     // the photos of a deleted restaurant are deleted too (their folder, by the restaurant's id)
     expect(storage.forgetRestaurantImages.mock.calls.map((c) => c[0])).toEqual([a.restaurantId, b.restaurantId]);
+  });
+
+  it('the removed "restaurant only" request (an old open admin page) is refused and deletes nothing', async () => {
+    const { a, admin, pg } = await setup();
+    mocks.user.current = { id: admin, email: 'r@example.com', role: 'super_admin' };
+    expect((await deleteRestaurant(json({ withAccount: false }), ctx(a.restaurantId))).status).toBe(400);
+    expect((await deleteRestaurant(json({}), ctx(a.restaurantId))).status).toBe(400);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+    expect(storage.forgetRestaurantImages).not.toHaveBeenCalled();
+    expect((await pg.query(`SELECT 1 FROM restaurants WHERE id = $1`, [a.restaurantId])).rows).toHaveLength(1);
   });
 
   it('an unknown restaurant, or a non-admin, refreshes nothing', async () => {

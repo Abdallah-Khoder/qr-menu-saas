@@ -24,14 +24,11 @@ export async function setRestaurantStatus(db: Db, id: string, status: 'active' |
   return res.rows.length > 0;
 }
 
-/** Deletes the restaurant and its menu. The owner's ACCOUNT stays. */
-export async function deleteRestaurant(db: Db, id: string): Promise<boolean> {
-  const res = await db.query(`DELETE FROM restaurants WHERE id = $1 RETURNING id`, [id]);
-  return res.rows.length > 0;
-}
-
 /**
- * Deletes an owner's account; the database removes his restaurant and menu with it.
+ * The only delete: the owner's ACCOUNT, and with it his restaurant, categories, items, sizes and codes (the
+ * database cascades every one of them, so nothing is left behind). The same email can be invited again afterwards.
+ * (A "restaurant only" delete was removed: it left an account that could not make a new restaurant, could not
+ * be invited again and was not even listed, so nobody could delete it.)
  * Only role 'owner': this can never delete a super-admin.
  */
 export async function deleteOwnerAccount(db: Db, restaurantId: string): Promise<boolean> {
