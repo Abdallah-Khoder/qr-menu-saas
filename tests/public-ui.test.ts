@@ -2,7 +2,9 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import FloatingContacts from '../src/components/FloatingContacts';
 import PublicContacts from '../src/components/PublicContacts';
+import { contactLinks } from '../src/lib/contact-links';
 import PublicPhoto from '../src/components/PublicPhoto';
 import PublicSizes from '../src/components/PublicSizes';
 import { pickSize } from '../src/lib/pick-size';
@@ -129,5 +131,55 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
     for (const name of ['.pm-icon', '.pm-tabs a', '.pm-item', '.pm-head h1']) expect(reduced, name).toContain(name);
     expect(reduced).toMatch(/animation:\s*none/);
+  });
+});
+
+describe('the contact links list (one list for the icons under the name and the floating buttons)', () => {
+  const all = { phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a', tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x' };
+  it('only the filled ones, in a fixed order, with no call link', () => {
+    expect(contactLinks(all).map((l) => l.icon)).toEqual(['whatsapp', 'instagram', 'facebook', 'tiktok', 'map']);
+    expect(contactLinks({ ...all, instagram: null, mapUrl: null }).map((l) => l.icon)).toEqual(['whatsapp', 'facebook', 'tiktok']);
+    expect(contactLinks({ phone: null, instagram: null, facebook: null, tiktok: null, mapUrl: null })).toEqual([]);
+    expect(contactLinks(all).some((l) => l.href.startsWith('tel:'))).toBe(false);
+  });
+});
+
+describe('floating buttons', () => {
+  const links = contactLinks({ phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: null, tiktok: null, mapUrl: null });
+  it('start hidden (they appear after a scroll), closed, with an accessible round toggle and a back-to-top arrow', () => {
+    const html = renderToStaticMarkup(createElement(FloatingContacts, { links }));
+    expect(html).toContain('class="pm-float" data-show="false" data-open="false"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="pm-float-links"');
+    expect(html).toContain('aria-label="التواصل مع المطعم"');
+    expect(html).toContain('aria-label="العودة إلى أعلى الصفحة"');
+    expect(html.match(/class="pm-icon pm-float-icon"/g)).toHaveLength(2);
+    expect(html).toContain('href="https://wa.me/96170123456"');
+    expect(html).not.toContain('tel:');
+    expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2);
+  });
+  it('with no contact links there is no contact button, only the back-to-top arrow', () => {
+    const html = renderToStaticMarkup(createElement(FloatingContacts, { links: [] }));
+    expect(html).not.toContain('pm-float-toggle');
+    expect(html).toContain('pm-top');
+  });
+  const css = readFileSync('src/app/globals.css', 'utf8');
+  it('the CSS hides them with "translate" (not "transform", which would block the press effect), and opens the column only on wide screens', () => {
+    expect(css).toMatch(/\.pm-float-icon\s*\{[^}]*translate:\s*0 10px/);
+    expect(css).not.toMatch(/\.pm-float-icon\s*\{[^}]*[^-]transform:\s*translate/);
+    expect(css).toMatch(/@media \(min-width: 1200px\)\s*\{[^@]*\.pm-float-toggle\s*\{\s*display:\s*none/);
+    expect(css).toMatch(/\.pm \{[^}]*padding: 0 16px 96px/); // room so the last card is never covered
+  });
+  it('their transitions are switched off for people who asked for less motion', () => {
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    for (const name of ['.pm-float', '.pm-float-icon', '.pm-float-toggle', '.pm-top']) expect(reduced, name).toContain(name);
+  });
+  it('the empty box around the hidden icons never swallows taps meant for the dishes underneath', () => {
+    expect(css).toMatch(/\.pm-float \{[^}]*pointer-events:\s*none/);
+    expect(css).toMatch(/\.pm-float-toggle, \.pm-float-icon \{\s*pointer-events:\s*auto/);
+  });
+  it('the back-to-top arrow scrolls smoothly, but at once for people who asked for less motion', () => {
+    const src = readFileSync('src/components/FloatingContacts.tsx', 'utf8');
+    expect(src).toContain("behavior: calm ? 'instant' : 'smooth'"); // 'auto' would still follow html { scroll-behavior: smooth }
   });
 });

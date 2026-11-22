@@ -1,25 +1,18 @@
 import type { CSSProperties } from 'react';
-import ContactIconSvg, { type ContactIcon } from '@/components/ContactIcon';
-import { whatsappUrl } from '@/lib/public-menu';
+import ContactIconSvg from '@/components/ContactIcon';
+import { contactLinks, type Contacts } from '@/lib/contact-links';
 
-// The round icon buttons under the restaurant's name. Only the ones the owner filled in appear. There is no
-// "call" button: customers reach the restaurant on WhatsApp. Every link opens in a new tab and sends no referrer.
-const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
+// The round icon buttons under the restaurant's name. Only the ones the owner filled in appear. Every link opens in a
+// new tab and sends no referrer.
+export const externalLink = { target: '_blank', rel: 'noopener noreferrer' } as const;
 
-type Contacts = { phone: string | null; instagram: string | null; facebook: string | null; tiktok: string | null; mapUrl: string | null };
-
-export default function PublicContacts({ phone, instagram, facebook, tiktok, mapUrl }: Contacts) {
-  const links: { href: string; label: string; icon: ContactIcon }[] = [];
-  if (phone) links.push({ href: whatsappUrl(phone), label: 'واتساب', icon: 'whatsapp' });
-  if (instagram) links.push({ href: instagram, label: 'إنستغرام', icon: 'instagram' });
-  if (facebook) links.push({ href: facebook, label: 'فيسبوك', icon: 'facebook' });
-  if (tiktok) links.push({ href: tiktok, label: 'تيك توك', icon: 'tiktok' });
-  if (mapUrl) links.push({ href: mapUrl, label: 'الموقع على الخريطة', icon: 'map' });
+export default function PublicContacts(contacts: Contacts) {
+  const links = contactLinks(contacts);
   if (links.length === 0) return null;
   return (
     <nav className="pm-contacts" aria-label="التواصل">
       {links.map((l, i) => (
-        <a key={l.icon} href={l.href} className="pm-icon" style={{ '--i': i } as CSSProperties} aria-label={l.label} title={l.label} {...external}>
+        <a key={l.icon} href={l.href} className="pm-icon" style={{ '--i': i } as CSSProperties} aria-label={l.label} title={l.label} {...externalLink}>
           <ContactIconSvg name={l.icon} />
         </a>
       ))}
