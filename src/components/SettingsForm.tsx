@@ -6,7 +6,7 @@ import { useHydrated } from '@/lib/use-hydrated';
 
 type R = {
   name: string; currencies: 'USD' | 'LBP' | 'BOTH'; phone_number: string | null; map_url: string | null;
-  instagram_url: string | null; facebook_url: string | null;
+  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null;
 };
 
 export default function SettingsForm({ restaurant, disabled = false }: { restaurant: R; disabled?: boolean }) {
@@ -25,7 +25,7 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
     setDone('');
     const problem = await postJson('/api/owner/settings', {
       name: text('name'), currencies: text('currencies'), phone: text('phone'),
-      mapUrl: text('mapUrl'), instagram: text('instagram'), facebook: text('facebook'),
+      mapUrl: text('mapUrl'), instagram: text('instagram'), facebook: text('facebook'), tiktok: text('tiktok'),
     });
     setBusy(false);
     if (problem) return setError(problem);
@@ -54,7 +54,7 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
 
       <div className="form-grid">
         <label className="field">
-          <span>رقم الهاتف (للاتصال والواتساب)</span>
+          <span>رقم الواتساب</span>
           <input name="phone" dir="ltr" defaultValue={restaurant.phone_number ?? ''} placeholder="+96170123456" inputMode="tel" />
         </label>
         <label className="field">
@@ -69,9 +69,13 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
           <span>فيسبوك (اختياري)</span>
           <input name="facebook" dir="ltr" defaultValue={restaurant.facebook_url ?? ''} placeholder="اسم الصفحة أو الرابط" />
         </label>
+        <label className="field">
+          <span>تيك توك (اختياري)</span>
+          <input name="tiktok" dir="ltr" defaultValue={restaurant.tiktok_url ?? ''} placeholder="@اسم_الحساب أو الرابط" />
+        </label>
       </div>
       <p className="note">لإضافة موقع المطعم: افتح «خرائط Google» وابحث عن مطعمك، ثم اضغط «مشاركة» و«نسخ الرابط»، والصق الرابط في خانة الخريطة.</p>
-      <p className="note">اترك أي خانة فارغة إذا لا تريدها، وتظهر للزبائن الأزرار التي عبّأتها فقط.</p>
+      <p className="note">اترك أي خانة فارغة إذا لا تريدها، وتظهر للزبائن الأيقونات التي عبّأتها فقط.</p>
 
       {error && <p className="error" role="alert">{error}</p>}
       {done && <p className="success" role="status">{done}</p>}

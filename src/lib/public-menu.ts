@@ -11,7 +11,7 @@ export type PublicItem = {
 export type PublicCategory = { name: string; items: PublicItem[] };
 export type PublicMenu = {
   name: string; currencies: 'USD' | 'LBP' | 'BOTH';
-  phone: string | null; mapUrl: string | null; instagram: string | null; facebook: string | null;
+  phone: string | null; mapUrl: string | null; instagram: string | null; facebook: string | null; tiktok: string | null;
   categories: PublicCategory[];
 };
 export type PublicResult = { state: 'ok'; menu: PublicMenu } | { state: 'unavailable' } | { state: 'missing' };
@@ -22,7 +22,7 @@ export const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,59}$/;
 export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult> {
   if (!SLUG_PATTERN.test(slug)) return { state: 'missing' };
   const res = await db.query(
-    `SELECT r.status, r.name, r.currencies, r.phone_number, r.map_url, r.instagram_url, r.facebook_url,
+    `SELECT r.status, r.name, r.currencies, r.phone_number, r.map_url, r.instagram_url, r.facebook_url, r.tiktok_url,
        CASE WHEN r.status = 'active' THEN COALESCE((
          SELECT json_agg(json_build_object('name', c.name, 'items', (
            SELECT json_agg(json_build_object(
@@ -48,12 +48,10 @@ export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult>
     state: 'ok',
     menu: {
       name: row.name, currencies: row.currencies, phone: row.phone_number, mapUrl: row.map_url,
-      instagram: row.instagram_url, facebook: row.facebook_url, categories: row.categories,
+      instagram: row.instagram_url, facebook: row.facebook_url, tiktok: row.tiktok_url, categories: row.categories,
     },
   };
 }
 
-/** "+96170123456" → "tel:+96170123456" (the number was already checked when the owner saved it). */
-export const callUrl = (phone: string) => `tel:${phone}`;
 /** WhatsApp wants the number as digits only: "+96170123456" → "https://wa.me/96170123456". */
 export const whatsappUrl = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;

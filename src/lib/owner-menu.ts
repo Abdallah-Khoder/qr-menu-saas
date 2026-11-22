@@ -1,6 +1,6 @@
 import type { Db } from './db';
 import { forgetUnusedImages } from './image-cleanup';
-import { parseFacebook, parseInstagram, parseMapUrl, parsePhone } from './owner-input';
+import { parseFacebook, parseInstagram, parseMapUrl, parsePhone, parseTiktok } from './owner-input';
 import { hasLetterOrDigit } from './slugify';
 
 // Every function here takes the OWNER's id (from his login), never a restaurant id from the request.
@@ -19,12 +19,12 @@ export const fail = (status: number, error: string): Result => ({ ok: false, sta
 export type OwnerRestaurant = {
   id: string; name: string; public_slug: string; status: 'active' | 'suspended';
   currencies: Currencies; phone_number: string | null; map_url: string | null;
-  instagram_url: string | null; facebook_url: string | null;
+  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null;
 };
 
 export async function getOwnerRestaurant(db: Db, ownerId: string): Promise<OwnerRestaurant | null> {
   const res = await db.query(
-    `SELECT id, name, public_slug, status, currencies, phone_number, map_url, instagram_url, facebook_url FROM restaurants WHERE owner_id = $1`,
+    `SELECT id, name, public_slug, status, currencies, phone_number, map_url, instagram_url, facebook_url, tiktok_url FROM restaurants WHERE owner_id = $1`,
     [ownerId],
   );
   return res.rows[0] ?? null;
@@ -59,7 +59,7 @@ function checkName(raw: string, what: string): { ok: true; name: string } | { ok
 export async function saveSettings(
   db: Db,
   ownerId: string,
-  input: { name: string; currencies: Currencies; phone: string; mapUrl: string; instagram: string; facebook: string },
+  input: { name: string; currencies: Currencies; phone: string; mapUrl: string; instagram: string; facebook: string; tiktok: string },
 ): Promise<Result> {
   const name = checkName(input.name, 'اسم المطعم');
   if (!name.ok) return fail(400, name.error);
@@ -71,6 +71,8 @@ export async function saveSettings(
   if (!instagram.ok) return fail(400, instagram.error);
   const facebook = parseFacebook(input.facebook);
   if (!facebook.ok) return fail(400, facebook.error);
+  const tiktok = parseTiktok(input.tiktok);
+  if (!tiktok.ok) return fail(400, tiktok.error);
 
   const res = await db.query(
     `WITH r AS (SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active'),
@@ -88,13 +90,13 @@ export async function saveSettings(
      ),
      upd AS (
        UPDATE restaurants SET name = $3, currencies = $2::text, phone_number = $4, map_url = $5,
-           instagram_url = $6, facebook_url = $7
+           instagram_url = $6, facebook_url = $7, tiktok_url = $8
        WHERE id = (SELECT id FROM r) AND (SELECT n FROM missing) = 0
        RETURNING id
      )
      SELECT (SELECT id FROM r) AS restaurant_id, (SELECT n FROM missing)::int AS missing,
             EXISTS (SELECT 1 FROM upd) AS updated`,
-    [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value],
+    [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value, tiktok.value],
   );
   const row = res.rows[0];
   if (!row?.restaurant_id) return explain(db, ownerId, fail(404, 'المطعم غير موجود'));

@@ -6,7 +6,7 @@ export const toAsciiDigits = (s: string) => s.replace(/[٠-٩]/g, (d) => String(
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /**
- * Phone for the call / WhatsApp buttons, saved as +<country><number>.
+ * Phone for the WhatsApp button, saved as +<country><number>.
  * Accepts "+961 70 123 456", "0096170123456", and Lebanese local "070 123 456" or "03 123 456".
  * Empty = no phone.
  */
@@ -93,6 +93,31 @@ export function parseInstagram(input: string): Parsed<string | null> {
   }
   if (!INSTAGRAM_ACCOUNT.test(account) || INSTAGRAM_RESERVED.has(account.toLowerCase())) return bad;
   return { ok: true, value: `https://www.instagram.com/${account}` };
+}
+
+const TIKTOK_HOSTS = ['tiktok.com', 'www.tiktok.com', 'm.tiktok.com'];
+const TIKTOK_ACCOUNT = /^[A-Za-z0-9._]{2,24}$/; // TikTok names: 2-24 letters, digits, "_" and "."
+
+export function parseTiktok(input: string): Parsed<string | null> {
+  const s = input.trim();
+  if (s === '') return { ok: true, value: null };
+  const bad = { ok: false as const, error: 'رابط تيك توك غير صالح. اكتب اسم الحساب فقط أو الصق رابط الصفحة' };
+  const asAccount = s.replace(/^@/, '');
+  let account = asAccount;
+  if (!TIKTOK_ACCOUNT.test(asAccount)) {
+    let url: URL;
+    try {
+      url = new URL(s);
+    } catch {
+      return bad;
+    }
+    if (url.protocol !== 'https:' || url.username || url.password || !TIKTOK_HOSTS.includes(url.hostname.toLowerCase())) return bad;
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length !== 1 || !parts[0].startsWith('@')) return bad; // a profile (tiktok.com/@name) only: no video, no short redirect link
+    account = parts[0].slice(1);
+  }
+  if (!TIKTOK_ACCOUNT.test(account) || account.endsWith('.')) return bad;
+  return { ok: true, value: `https://www.tiktok.com/@${account}` };
 }
 
 const FACEBOOK_HOSTS = ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.com', 'www.fb.com', 'fb.me'];
