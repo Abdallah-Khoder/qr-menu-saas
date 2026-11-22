@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import ContactIconSvg from '@/components/ContactIcon';
-import { externalLink } from '@/components/PublicContacts';
-import type { ContactLink } from '@/lib/contact-links';
+import { externalLink, type ContactLink } from '@/lib/contact-links';
 
-// Floating buttons on the public menu, shown once the person has scrolled past the header (the icons under the name are
-// still on screen before that):
-//  - a "back to top" arrow (the sections bar is no longer fixed, so this is the way back to it);
-//  - the contact links. On a phone or tablet they are ONE round button that opens the icons upwards (a column of five
-//    would sit on top of the dishes); on a wide screen (CSS, >= 1200px) the column is always open at the side of the
-//    page, where there is empty room.
+// Floating buttons on the public menu:
+//  - the contact links, there from the first moment (nothing to scroll for). On a phone or tablet they are ONE round
+//    button that opens the icons upwards (a column of five would sit on top of the dishes); on a wide screen (CSS,
+//    >= 1200px) the column is always open at the side of the page, where there is empty room;
+//  - a "back to top" arrow, shown only once the person has scrolled (the sections bar is no longer fixed, so this is
+//    the way back to it).
 const SHOW_AFTER = 300; // px scrolled
 
 export default function FloatingContacts({ links }: { links: ContactLink[] }) {
@@ -18,7 +17,6 @@ export default function FloatingContacts({ links }: { links: ContactLink[] }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
-  const expanded = open && scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > SHOW_AFTER);
@@ -53,7 +51,7 @@ export default function FloatingContacts({ links }: { links: ContactLink[] }) {
   return (
     <>
       {links.length > 0 && (
-        <div ref={box} className="pm-float" data-show={scrolled} data-open={expanded} style={{ '--n': links.length } as CSSProperties}>
+        <div ref={box} className="pm-float" data-open={open} style={{ '--n': links.length } as CSSProperties}>
           <div className="pm-float-links" id="pm-float-links">
             {links.map((l, i) => (
               <a key={l.icon} href={l.href} className="pm-icon pm-float-icon" style={{ '--i': i } as CSSProperties} aria-label={l.label} title={l.label} {...externalLink}>
@@ -65,12 +63,12 @@ export default function FloatingContacts({ links }: { links: ContactLink[] }) {
             ref={toggle}
             type="button"
             className="pm-float-toggle"
-            aria-expanded={expanded}
+            aria-expanded={open}
             aria-controls="pm-float-links"
-            aria-label={expanded ? 'إغلاق' : 'التواصل مع المطعم'}
+            aria-label={open ? 'إغلاق' : 'التواصل مع المطعم'}
             onClick={() => setOpen(!open)}
           >
-            <ContactIconSvg name={expanded ? 'close' : 'chat'} />
+            <ContactIconSvg name={open ? 'close' : 'chat'} />
           </button>
         </div>
       )}
