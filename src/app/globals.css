@@ -203,7 +203,7 @@ fieldset.plain:disabled { opacity: .6; }
 
 /* Public menu (what customers see) */
 html { scroll-behavior: smooth; }
-.pm { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; }
+.pm { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
 .pm-head { text-align: center; padding: 28px 0 14px; }
 .pm-head h1 { margin: 0 0 14px; font-size: 1.7rem; }
 .pm-contacts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -212,14 +212,18 @@ html { scroll-behavior: smooth; }
 .pm-tabs a { white-space: nowrap; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 16px; }
 .pm-cat { scroll-margin-top: 64px; margin-top: 18px; }
 .pm-cat h2 { font-size: 1.25rem; margin: 0 0 8px; color: var(--brand); }
-/* every item is its own small card, with a gap between the cards */
-.pm-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.pm-item { display: flex; justify-content: space-between; gap: 14px; padding: 14px 16px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+/* the items are a grid of cards: 2 across on a phone, 3 on a tablet, 4 on a laptop; a row's cards are equally tall */
+.pm-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 640px) { .pm-items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+@media (min-width: 960px) { .pm-items { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* one card: photo on top, then the name and description, and the price (with the size buttons) at the bottom */
+.pm-item { display: flex; flex-direction: column; gap: 10px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
 .pm-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.pm-photo { width: 84px; height: 84px; flex: none; object-fit: cover; border-radius: 12px; background: var(--line); }
-.pm-info p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.pm-photo { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--line); }
+.pm-info p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.pm-info b { overflow-wrap: anywhere; }
 .pm-price { font-weight: 700; white-space: nowrap; }
-.pm-sized { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.pm-sized { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 /* the page is right-to-left, but sizes (S M L) read left to right, so the row is forced ltr */
 .pm-size-btns { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; direction: ltr; }
 .pm-size-btn { font: inherit; min-height: 32px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; transition: background-color .18s, border-color .18s, color .18s, transform .12s; }
@@ -240,7 +244,7 @@ html { scroll-behavior: smooth; }
   .pm-price-swap, .pm-viewer[open], .pm-viewer[open]::backdrop { animation: none; }
   .pm-size-btn:active, .pm-photo-btn:hover img, .pm-photo-btn:active img { transform: none; }
 }
-.pm-photo-btn { flex: none; padding: 0; border: 0; background: none; line-height: 0; border-radius: 12px; cursor: zoom-in; }
+.pm-photo-btn { display: block; width: 100%; padding: 0; border: 0; background: none; line-height: 0; border-radius: 10px; overflow: hidden; cursor: zoom-in; }
 .pm-viewer { border: 0; padding: 0; background: transparent; max-width: 100vw; max-height: 100vh; overflow: visible; }
 .pm-viewer::backdrop { background: rgba(0, 0, 0, .78); }
 .pm-viewer img { display: block; max-width: min(92vw, 640px); max-height: 85vh; width: auto; height: auto; border-radius: 12px; }
