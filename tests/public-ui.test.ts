@@ -3,7 +3,6 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import FloatingContacts from '../src/components/FloatingContacts';
-import PublicContacts from '../src/components/PublicContacts';
 import { contactLinks } from '../src/lib/contact-links';
 import PublicPhoto from '../src/components/PublicPhoto';
 import PublicSizes from '../src/components/PublicSizes';
@@ -80,33 +79,42 @@ describe('a price on a narrow card (320 px) never runs out of the card', () => {
   });
 });
 
-describe('contact icons on the public page', () => {
+describe('contact icons on the public page (only in the floating button, nothing under the name)', () => {
   const none = { phone: null, instagram: null, facebook: null, tiktok: null, mapUrl: null };
-  it('shows nothing when the owner filled in nothing', () => {
-    expect(renderToStaticMarkup(createElement(PublicContacts, none))).toBe('');
+  it('shows no contact button when the owner filled in nothing', () => {
+    const html = renderToStaticMarkup(createElement(FloatingContacts, { links: contactLinks(none) }));
+    expect(html).not.toContain('pm-float-toggle');
+    expect(html).not.toContain('pm-icon');
   });
   it('shows ONE round icon per filled link, in a fixed order, each with its own name (no text button, no call link)', () => {
-    const html = renderToStaticMarkup(createElement(PublicContacts, {
+    const links = contactLinks({
       phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a',
       tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x',
-    }));
-    expect(html.match(/class="pm-icon"/g)).toHaveLength(5);
-    const labels = [...html.matchAll(/aria-label="([^"]+)" title/g)].map((m) => m[1]);
+    });
+    const html = renderToStaticMarkup(createElement(FloatingContacts, { links }));
+    expect(html.match(/class="pm-icon pm-float-icon"/g)).toHaveLength(5);
+    const labels = [...html.matchAll(/aria-label="([^"]+)" title/g)].map((m) => m[1]).filter((l) => l !== 'العودة إلى أعلى الصفحة');
     expect(labels).toEqual(['واتساب', 'إنستغرام', 'فيسبوك', 'تيك توك', 'الموقع على الخريطة']);
     expect(html).toContain('href="https://wa.me/96170123456"');
     expect(html).toContain('href="https://www.tiktok.com/@a"');
     expect(html).not.toContain('tel:');
     expect(html).not.toContain('اتصال');
     expect(html).not.toContain('pm-btn');
-    expect((html.match(/<svg/g) ?? []).length).toBe(5); // an icon in every button
     expect((html.match(/rel="noopener noreferrer"/g) ?? []).length).toBe(5);
     expect((html.match(/target="_blank"/g) ?? []).length).toBe(5);
+    expect((html.match(/<svg/g) ?? []).length).toBe(5 + 2); // an icon in every link, plus the round button and the arrow
   });
-  it('a phone number now gives only the WhatsApp icon, and TikTok is optional', () => {
-    const html = renderToStaticMarkup(createElement(PublicContacts, { ...none, phone: '+96170123456' }));
-    expect(html.match(/class="pm-icon"/g)).toHaveLength(1);
+  it('a phone number gives only the WhatsApp icon, and TikTok is optional', () => {
+    const html = renderToStaticMarkup(createElement(FloatingContacts, { links: contactLinks({ ...none, phone: '+96170123456' }) }));
+    expect(html.match(/class="pm-icon pm-float-icon"/g)).toHaveLength(1);
     expect(html).toContain('aria-label="واتساب"');
     expect(html).not.toContain('تيك توك');
+  });
+  it('the page itself no longer puts the icons under the restaurant name', () => {
+    const page = readFileSync('src/app/m/[slug]/page.tsx', 'utf8');
+    expect(page).not.toContain('PublicContacts');
+    expect(page).not.toContain('pm-contacts');
+    expect(page).toContain('<FloatingContacts');
   });
 });
 
@@ -121,7 +129,7 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
   });
   it('entrance animations use "backwards", never "both": a kept end value would block the press and hover effects', () => {
     const entrances = [...css.matchAll(/animation:\s*pm-(?:rise|pop-in)[^;]*;/g)].map((m) => m[0]);
-    expect(entrances).toHaveLength(4); // the name, the icons, the section chips, the cards
+    expect(entrances).toHaveLength(4); // the name, the round contact button, the section chips, the cards
     for (const a of entrances) {
       expect(a).toContain('backwards');
       expect(a).not.toMatch(/\bboth\b/);
@@ -129,12 +137,12 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
   });
   it('every entrance animation is switched off for people who asked for less motion', () => {
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-    for (const name of ['.pm-icon', '.pm-tabs a', '.pm-item', '.pm-head h1']) expect(reduced, name).toContain(name);
-    expect(reduced).toMatch(/animation:\s*none/);
+    const off = reduced.match(/([^{}]+)\{\s*animation:\s*none/)?.[1] ?? ''; // the selectors whose animation is switched off
+    for (const name of ['.pm-float-toggle', '.pm-tabs a', '.pm-item', '.pm-head h1']) expect(off, name).toContain(name);
   });
 });
 
-describe('the contact links list (one list for the icons under the name and the floating buttons)', () => {
+describe('the contact links list (feeds the floating contact button)', () => {
   const all = { phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a', tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x' };
   it('only the filled ones, in a fixed order, with no call link', () => {
     expect(contactLinks(all).map((l) => l.icon)).toEqual(['whatsapp', 'instagram', 'facebook', 'tiktok', 'map']);
@@ -146,9 +154,11 @@ describe('the contact links list (one list for the icons under the name and the 
 
 describe('floating buttons', () => {
   const links = contactLinks({ phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: null, tiktok: null, mapUrl: null });
-  it('start hidden (they appear after a scroll), closed, with an accessible round toggle and a back-to-top arrow', () => {
+  it('the contact button is there from the first render (no scroll needed), closed, accessible; the arrow waits for a scroll', () => {
     const html = renderToStaticMarkup(createElement(FloatingContacts, { links }));
-    expect(html).toContain('class="pm-float" data-show="false" data-open="false"');
+    expect(html).toContain('class="pm-float" data-open="false"');
+    expect(html).not.toContain('class="pm-float" data-show'); // the contact box does not wait for a scroll
+    expect(html).toContain('class="pm-top" data-show="false"'); // the arrow does
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('aria-controls="pm-float-links"');
     expect(html).toContain('aria-label="التواصل مع المطعم"');
@@ -172,7 +182,15 @@ describe('floating buttons', () => {
   });
   it('their transitions are switched off for people who asked for less motion', () => {
     const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-    for (const name of ['.pm-float', '.pm-float-icon', '.pm-float-toggle', '.pm-top']) expect(reduced, name).toContain(name);
+    for (const name of ['.pm-float-icon', '.pm-float-toggle', '.pm-top']) expect(reduced, name).toContain(name);
+  });
+  it('the contact box is always shown (never hidden by the scroll); only the arrow is', () => {
+    const box = css.match(/(^|\n)\.pm-float \{([^}]*)\}/)?.[2] ?? '';
+    expect(box).not.toMatch(/visibility:\s*hidden|opacity:\s*0|translate:/);
+    expect(css).not.toContain('.pm-float[data-show');
+    const arrow = css.match(/(^|\n)\.pm-top \{([^}]*)\}/)?.[2] ?? '';
+    expect(arrow).toMatch(/visibility:\s*hidden/);
+    expect(css).toContain('.pm-top[data-show="true"]');
   });
   it('the empty box around the hidden icons never swallows taps meant for the dishes underneath', () => {
     expect(css).toMatch(/\.pm-float \{[^}]*pointer-events:\s*none/);

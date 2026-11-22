@@ -206,8 +206,7 @@ html { scroll-behavior: smooth; }
 .pm { max-width: 1040px; margin: 0 auto; padding: 0 16px 96px; } /* room at the bottom so the floating buttons never cover the last card */
 .pm-head { text-align: center; padding: 28px 0 14px; }
 .pm-head h1 { margin: 0 0 14px; font-size: 1.7rem; }
-.pm-contacts { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-/* a round icon button (WhatsApp, Instagram, Facebook, TikTok, map): 46px, a comfortable size for a thumb */
+/* a round icon button of the floating contact column (WhatsApp, Instagram, Facebook, TikTok, map): 46px, a comfortable size for a thumb */
 .pm-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--brand); background: var(--card); color: var(--brand); text-decoration: none; transition: background-color .18s, color .18s, transform .15s, box-shadow .18s; }
 .pm-icon:active { transform: scale(.9); }
 .pm-icon:focus-visible, .pm-tabs a:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
@@ -220,13 +219,12 @@ html { scroll-behavior: smooth; }
   .pm-tabs a:hover { border-color: var(--brand); color: var(--brand); }
 }
 .pm-cat { scroll-margin-top: 12px; margin-top: 18px; }
-/* Floating buttons: they appear once the person has scrolled (data-show) and never use "transform" to hide, only "translate",
-   so the press effect on the icons (a transform) still works. */
+/* Floating buttons: the contact button is always there; only the back-to-top arrow appears once the person has scrolled
+   (data-show). They never use "transform" to hide, only "translate", so the press effect (a transform) still works. */
 .pm-float, .pm-top { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30; }
-.pm-float { inset-inline-end: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; visibility: hidden; opacity: 0; translate: 0 12px; pointer-events: none; transition: opacity .25s, translate .25s, visibility 0s .25s; }
-.pm-float[data-show="true"] { visibility: visible; opacity: 1; translate: none; transition-delay: 0s; }
+.pm-float { inset-inline-end: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; } /* the box itself ignores taps; only the button and the icons take them */
 .pm-float-toggle, .pm-top { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--brand); color: var(--on-brand); cursor: pointer; box-shadow: 0 6px 16px rgba(0, 0, 0, .28); transition: background-color .18s, transform .15s; }
-.pm-float-toggle { width: 54px; height: 54px; }
+.pm-float-toggle { width: 54px; height: 54px; animation: pm-pop-in .35s ease-out .3s backwards; }
 .pm-float-toggle svg { width: 26px; height: 26px; }
 .pm-float-toggle:active, .pm-top:active { transform: scale(.92); }
 .pm-float-toggle:focus-visible, .pm-top:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
@@ -243,14 +241,13 @@ html { scroll-behavior: smooth; }
   .pm-float-toggle { display: none; }
   .pm-float-icon { visibility: inherit; opacity: 1; translate: none; scale: 1; transition-delay: 0s; }
 }
-/* a light entrance: the name, the icons, the sections and the first cards rise in one after the other (--i is the
-   place in the row, capped at 8 so nothing waits long). Only opacity and transform move: no layout work.
+/* a light entrance: the name, the sections and the first cards rise in one after the other, and the contact button
+   pops in (--i is the place in the row, capped at 8 so nothing waits long). Only opacity and transform move: no layout work.
    "backwards" (not "both"): the hidden start is kept during the delay, but after the entrance the animation lets go of
    transform, so the press and hover effects below still work (a kept animation value would override them). */
 @keyframes pm-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes pm-pop-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 .pm-head h1 { animation: pm-rise .4s ease-out backwards; }
-.pm-icon { animation: pm-pop-in .35s ease-out backwards; animation-delay: calc(var(--i, 0) * 60ms); }
 .pm-tabs a { animation: pm-rise .35s ease-out backwards; animation-delay: calc(var(--i, 0) * 30ms); }
 .pm-item { animation: pm-rise .4s ease-out backwards; animation-delay: calc(var(--i, 0) * 45ms); }
 .pm-cat h2 { font-size: 1.25rem; margin: 0 0 8px; color: var(--brand); }
@@ -288,8 +285,8 @@ html { scroll-behavior: smooth; }
 @keyframes pm-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes pm-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .pm-size-btn, .pm-photo-btn img, .pm-icon, .pm-tabs a, .pm-float, .pm-float-icon, .pm-float-toggle, .pm-top { transition: none; }
-  .pm-price-swap, .pm-viewer[open], .pm-viewer[open]::backdrop, .pm-head h1, .pm-icon, .pm-tabs a, .pm-item { animation: none; }
+  .pm-size-btn, .pm-photo-btn img, .pm-icon, .pm-tabs a, .pm-float-icon, .pm-float-toggle, .pm-top { transition: none; }
+  .pm-price-swap, .pm-viewer[open], .pm-viewer[open]::backdrop, .pm-head h1, .pm-float-toggle, .pm-tabs a, .pm-item { animation: none; }
   .pm-size-btn:active, .pm-photo-btn:hover img, .pm-photo-btn:active img, .pm-icon:hover, .pm-icon:active, .pm-tabs a:active, .pm-float-toggle:active, .pm-top:active { transform: none; }
 }
 .pm-photo-btn { display: block; width: 100%; padding: 0; border: 0; background: none; line-height: 0; border-radius: 10px; overflow: hidden; cursor: zoom-in; }

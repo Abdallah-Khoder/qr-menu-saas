@@ -1,13 +1,15 @@
 import { whatsappUrl } from './public-menu';
 
+// Every contact link opens in a new tab and sends no referrer.
+export const externalLink = { target: '_blank', rel: 'noopener noreferrer' } as const;
+
 export type ContactIconName = 'whatsapp' | 'instagram' | 'facebook' | 'tiktok' | 'map';
 export type ContactLink = { href: string; label: string; icon: ContactIconName };
 export type Contacts = { phone: string | null; instagram: string | null; facebook: string | null; tiktok: string | null; mapUrl: string | null };
 
 /**
- * The contact links of a restaurant, only the ones the owner filled in, in a fixed order. One list feeds both the
- * round icons under the name and the floating buttons, so they can never disagree. There is no "call" link:
- * customers reach the restaurant on WhatsApp.
+ * The contact links of a restaurant, only the ones the owner filled in, in a fixed order. They feed the floating
+ * contact button (the only place the icons appear). There is no "call" link: customers reach the restaurant on WhatsApp.
  */
 export function contactLinks({ phone, instagram, facebook, tiktok, mapUrl }: Contacts): ContactLink[] {
   const links: ContactLink[] = [];

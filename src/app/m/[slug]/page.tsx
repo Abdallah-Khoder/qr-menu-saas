@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache, type CSSProperties } from 'react';
 import FloatingContacts from '@/components/FloatingContacts';
-import PublicContacts from '@/components/PublicContacts';
 import PublicPhoto from '@/components/PublicPhoto';
 import PublicSizes from '@/components/PublicSizes';
 import RefreshOnReturn from '@/components/RefreshOnReturn';
@@ -51,7 +50,6 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
       <RefreshOnReturn />
       <header className="pm-head">
         <h1 dir="auto">{menu.name}</h1>
-        <PublicContacts phone={menu.phone} instagram={menu.instagram} facebook={menu.facebook} tiktok={menu.tiktok} mapUrl={menu.mapUrl} />
       </header>
 
       {menu.categories.length === 0 ? (
