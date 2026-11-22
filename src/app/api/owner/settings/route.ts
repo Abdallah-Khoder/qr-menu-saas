@@ -9,6 +9,7 @@ const Body = z.object({
   mapUrl: z.string().max(1000),
   instagram: z.string().max(1000),
   facebook: z.string().max(1000),
+  tiktok: z.string().max(1000),
 });
 
 export async function POST(request: Request) {

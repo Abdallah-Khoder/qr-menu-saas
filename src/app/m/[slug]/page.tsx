@@ -1,17 +1,21 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { cache } from 'react';
+import { cache, type CSSProperties } from 'react';
+import PublicContacts from '@/components/PublicContacts';
 import PublicPhoto from '@/components/PublicPhoto';
 import PublicSizes from '@/components/PublicSizes';
 import RefreshOnReturn from '@/components/RefreshOnReturn';
 import { getCachedPublicMenu } from '@/lib/public-cache';
-import { callUrl, whatsappUrl, type PublicItem } from '@/lib/public-menu';
+import { type PublicItem } from '@/lib/public-menu';
 import PriceAmounts from '@/components/PriceAmounts';
 
 // The page a customer opens by scanning the QR code: no login, and the menu is readable without JavaScript (the
 // size buttons, the big photo and the refresh when coming back are small extras). The menu comes from the
 // cache (one database query only when it is not there yet or was just changed); see public-cache.ts.
 const load = cache(getCachedPublicMenu);
+
+// --i = the place in a row of things: the CSS delays each one a little so they rise in one after the other (capped at 8).
+const place = (i: number) => ({ '--i': Math.min(i, 8) }) as CSSProperties;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const result = await load((await params).slug);
@@ -28,8 +32,6 @@ function Price({ item, currencies }: { item: PublicItem; currencies: 'USD' | 'LB
   return <div className="pm-price"><PriceAmounts usd={item.price_usd} lbp={item.price_lbp} currencies={currencies} /></div>;
 }
 
-const external = { target: '_blank', rel: 'noopener noreferrer' } as const;
-
 export default async function PublicMenuPage({ params }: { params: Promise<{ slug: string }> }) {
   const result = await load((await params).slug);
   if (result.state === 'missing') notFound();
@@ -41,24 +43,12 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
     );
   }
   const { menu } = result;
-  const contacts: { href: string; label: string; web: boolean }[] = [];
-  if (menu.phone) contacts.push({ href: callUrl(menu.phone), label: 'اتصال', web: false }, { href: whatsappUrl(menu.phone), label: 'واتساب', web: true });
-  if (menu.mapUrl) contacts.push({ href: menu.mapUrl, label: 'الموقع', web: true });
-  if (menu.instagram) contacts.push({ href: menu.instagram, label: 'إنستغرام', web: true });
-  if (menu.facebook) contacts.push({ href: menu.facebook, label: 'فيسبوك', web: true });
-
   return (
     <main className="pm">
       <RefreshOnReturn />
       <header className="pm-head">
         <h1 dir="auto">{menu.name}</h1>
-        {contacts.length > 0 && (
-          <nav className="pm-contacts" aria-label="التواصل">
-            {contacts.map((c) => (
-              <a key={c.label} href={c.href} className="pm-btn" {...(c.web ? external : {})}>{c.label}</a>
-            ))}
-          </nav>
-        )}
+        <PublicContacts phone={menu.phone} instagram={menu.instagram} facebook={menu.facebook} tiktok={menu.tiktok} mapUrl={menu.mapUrl} />
       </header>
 
       {menu.categories.length === 0 ? (
@@ -67,7 +57,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
         <>
           <nav className="pm-tabs" aria-label="الأقسام">
             {menu.categories.map((c, i) => (
-              <a key={i} href={`#c${i}`} dir="auto">{c.name}</a>
+              <a key={i} href={`#c${i}`} dir="auto" style={place(i)}>{c.name}</a>
             ))}
           </nav>
           {menu.categories.map((c, i) => (
@@ -75,7 +65,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
               <h2 dir="auto">{c.name}</h2>
               <ul className="pm-items">
                 {c.items.map((item, j) => (
-                  <li key={j} className="pm-item">
+                  <li key={j} className="pm-item" style={place(j)}>
                     {item.image && <PublicPhoto src={item.image} />}
                     <div className="pm-info">
                       <b dir="auto">{item.name}</b>

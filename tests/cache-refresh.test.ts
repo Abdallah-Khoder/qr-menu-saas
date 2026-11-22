@@ -60,7 +60,7 @@ describe('owner changes refresh the cached public menu', () => {
   it('settings changes (name, phone, links, currencies) refresh it too', async () => {
     const { a } = await setup();
     mocks.user.current = owner(a.ownerId);
-    const res = await saveSettings(json({ name: 'New name', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '' }));
+    const res = await saveSettings(json({ name: 'New name', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '' }));
     expect(res.status).toBe(200);
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
   });
@@ -91,7 +91,7 @@ describe('owner changes refresh the cached public menu', () => {
     const { a } = await setup();
     mocks.user.current = owner(a.ownerId);
     expect((await addCategory(json({ name: '' }))).status).toBe(400);
-    expect((await saveSettings(json({ name: '🍕', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '' }))).status).toBe(400);
+    expect((await saveSettings(json({ name: '🍕', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '' }))).status).toBe(400);
     mocks.user.current = null;
     expect((await addCategory(json({ name: 'x' }))).status).toBe(401);
     expect(mocks.revalidateTag).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEST_BLOB_HOST, add, makeDb, photoUrl } from './helpers';
-import { callUrl, getPublicMenu, whatsappUrl } from '../src/lib/public-menu';
+import { getPublicMenu, whatsappUrl } from '../src/lib/public-menu';
 import { createCategory, listCategories, saveSettings } from '../src/lib/owner-menu';
 import { createItem, listItems, setItemAvailable, type ItemInput } from '../src/lib/owner-items';
 
@@ -85,9 +85,11 @@ describe('getPublicMenu', () => {
 
   it('gives only the contact data the owner filled in', async () => {
     const { pg, a } = await setup();
-    expect(await menuOf(pg)).toMatchObject({ phone: null, mapUrl: null, instagram: null, facebook: null });
-    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '03 123 456', mapUrl: '', instagram: '@alpha.food', facebook: '' });
-    expect(await menuOf(pg)).toMatchObject({ name: 'Alpha', phone: '+9613123456', instagram: 'https://www.instagram.com/alpha.food', facebook: null });
+    expect(await menuOf(pg)).toMatchObject({ phone: null, mapUrl: null, instagram: null, facebook: null, tiktok: null });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '03 123 456', mapUrl: '', instagram: '@alpha.food', facebook: '', tiktok: '' });
+    expect(await menuOf(pg)).toMatchObject({ name: 'Alpha', phone: '+9613123456', instagram: 'https://www.instagram.com/alpha.food', facebook: null, tiktok: null });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '@alpha.food' });
+    expect(await menuOf(pg)).toMatchObject({ phone: null, instagram: null, tiktok: 'https://www.tiktok.com/@alpha.food' });
   });
 
   it('prices come back as exact text', async () => {
@@ -100,8 +102,7 @@ describe('getPublicMenu', () => {
 });
 
 describe('contact links', () => {
-  it('call and WhatsApp links', () => {
-    expect(callUrl('+96170123456')).toBe('tel:+96170123456');
+  it('the WhatsApp link (digits only); there is no call link any more', () => {
     expect(whatsappUrl('+96170123456')).toBe('https://wa.me/96170123456');
   });
 });

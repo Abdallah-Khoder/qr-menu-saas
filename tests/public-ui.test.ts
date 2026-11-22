@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import PublicContacts from '../src/components/PublicContacts';
 import PublicPhoto from '../src/components/PublicPhoto';
 import PublicSizes from '../src/components/PublicSizes';
 import { pickSize } from '../src/lib/pick-size';
@@ -74,5 +75,51 @@ describe('a price on a narrow card (320 px) never runs out of the card', () => {
     expect(css).toMatch(/\.pm-price\s*\{[^}]*flex-wrap:\s*wrap[^}]*justify-content:\s*space-between/);
     expect(css).toMatch(/\.pm-amt\s*\{[^}]*max-width:\s*100%/);
     expect(css).not.toMatch(/\.pm-(price|amt)\s*\{[^}]*white-space:\s*nowrap/);
+  });
+});
+
+describe('contact icons on the public page', () => {
+  const none = { phone: null, instagram: null, facebook: null, tiktok: null, mapUrl: null };
+  it('shows nothing when the owner filled in nothing', () => {
+    expect(renderToStaticMarkup(createElement(PublicContacts, none))).toBe('');
+  });
+  it('shows ONE round icon per filled link, in a fixed order, each with its own name (no text button, no call link)', () => {
+    const html = renderToStaticMarkup(createElement(PublicContacts, {
+      phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a',
+      tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x',
+    }));
+    expect(html.match(/class="pm-icon"/g)).toHaveLength(5);
+    const labels = [...html.matchAll(/aria-label="([^"]+)" title/g)].map((m) => m[1]);
+    expect(labels).toEqual(['واتساب', 'إنستغرام', 'فيسبوك', 'تيك توك', 'الموقع على الخريطة']);
+    expect(html).toContain('href="https://wa.me/96170123456"');
+    expect(html).toContain('href="https://www.tiktok.com/@a"');
+    expect(html).not.toContain('tel:');
+    expect(html).not.toContain('اتصال');
+    expect(html).not.toContain('pm-btn');
+    expect((html.match(/<svg/g) ?? []).length).toBe(5); // an icon in every button
+    expect((html.match(/rel="noopener noreferrer"/g) ?? []).length).toBe(5);
+    expect((html.match(/target="_blank"/g) ?? []).length).toBe(5);
+  });
+  it('a phone number now gives only the WhatsApp icon, and TikTok is optional', () => {
+    const html = renderToStaticMarkup(createElement(PublicContacts, { ...none, phone: '+96170123456' }));
+    expect(html.match(/class="pm-icon"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="واتساب"');
+    expect(html).not.toContain('تيك توك');
+  });
+});
+
+describe('the sections wrap instead of scrolling sideways, and the motion respects reduced-motion', () => {
+  const css = readFileSync('src/app/globals.css', 'utf8');
+  const rule = (selector: string) => css.match(new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[2] ?? '';
+  it('.pm-tabs wraps, is not sticky and has no horizontal scroll', () => {
+    const tabs = rule('.pm-tabs');
+    expect(tabs).toContain('flex-wrap: wrap');
+    expect(tabs).not.toContain('overflow-x');
+    expect(tabs).not.toContain('sticky');
+  });
+  it('every entrance animation is switched off for people who asked for less motion', () => {
+    const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+    for (const name of ['.pm-icon', '.pm-tabs a', '.pm-item', '.pm-head h1']) expect(reduced, name).toContain(name);
+    expect(reduced).toMatch(/animation:\s*none/);
   });
 });

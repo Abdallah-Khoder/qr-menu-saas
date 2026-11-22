@@ -136,9 +136,10 @@ owner's own id (from his login) and find his restaurant inside the same SQL stat
 restaurant's category id just gets 404.
 
 - **Settings:** name (the public link never changes with it, so printed QR codes stay valid), currency
-  (`USD`, `LBP` or `BOTH`), phone (`+961...`; Lebanese local numbers and Arabic digits are accepted),
-  map link (https only), Instagram and Facebook (each optional, any combination; account name or the real
-  link, other websites are refused so an icon can never lead somewhere else).
+  (`USD`, `LBP` or `BOTH`), phone for WhatsApp (`+961...`; Lebanese local numbers and Arabic digits are accepted),
+  map link (https only), Instagram, Facebook and TikTok (each optional, any combination; account name or the real
+  link, other websites are refused so an icon can never lead somewhere else; a TikTok short link or a video
+  link is refused too, only `tiktok.com/@name` is kept).
 - **Currency change:** refused while some item or size has no price in the chosen currency; the same SQL
   statement counts them and only updates when there are none. Going back to one currency keeps the other
   price stored (just hidden).
@@ -182,9 +183,15 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   "هذه القائمة غير متاحة حاليًا" and its items are not even read from the database.
 - **Bad links:** a link that does not look like a real one (`[a-z0-9-]`, up to 60 characters) gives 404
   without asking the database; an unknown link gives the same 404.
-- **Buttons:** call (`tel:`), WhatsApp (`wa.me`, digits only), map, Instagram, Facebook. Only the ones the owner
-  filled in. External links open in a new tab with `rel="noopener noreferrer"`. They are text buttons, not the
-  platforms' logos (logos belong to those companies; add the official ones from their brand pages if wanted).
+- **Contact icons:** round icon buttons for WhatsApp (`wa.me`, digits only), Instagram, Facebook, TikTok and the map
+  (no call button: customers reach the restaurant on WhatsApp). Only the ones the owner filled in. External links
+  open in a new tab with `rel="noopener noreferrer"`. The four brand glyphs are inline SVG from
+  [Simple Icons](https://simpleicons.org) (CC0); the logos belong to their companies and are used only to link to the
+  restaurant's own page.
+- **Sections bar:** the section chips wrap onto more lines when there are many (no sideways scrolling). It is not
+  sticky any more: a bar of several lines would cover too much of a phone screen.
+- **Motion:** light CSS animations (the name, the icons, the chips and the first cards rise in; icons and chips react
+  to a press). Only opacity and transform move, and all of it is off for people who set "reduce motion".
 - **Privacy:** the page asks search engines not to index it (`noindex`) and sends no referrer: the link is for
   the people who scan the code. Easy to change if a restaurant wants to be found on Google.
 - Text uses `dir="auto"`, so Arabic and English names each get the right direction.

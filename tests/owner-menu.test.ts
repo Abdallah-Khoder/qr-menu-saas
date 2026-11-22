@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { add, makeDb } from './helpers';
 import { checkOwnerRequest } from '../src/lib/owner-guard';
-import { parseFacebook, parseInstagram, parseMapUrl, parsePhone } from '../src/lib/owner-input';
+import { parseFacebook, parseInstagram, parseMapUrl, parsePhone, parseTiktok } from '../src/lib/owner-input';
 import {
   MAX_CATEGORIES, SUSPENDED_MESSAGE, createCategory, deleteCategory, getOwnerRestaurant, listCategories, moveCategory,
   renameCategory, saveSettings,
@@ -54,6 +54,23 @@ describe('social links', () => {
       expect(parseInstagram(bad).ok, bad).toBe(false);
     }
   });
+  it('TikTok: account name or a profile link, rebuilt in one safe shape', () => {
+    expect(parseTiktok('')).toEqual({ ok: true, value: null });
+    expect(parseTiktok('  ')).toEqual({ ok: true, value: null });
+    expect(parseTiktok('shaar.crepe')).toEqual({ ok: true, value: 'https://www.tiktok.com/@shaar.crepe' });
+    expect(parseTiktok('@shaar_crepe')).toEqual({ ok: true, value: 'https://www.tiktok.com/@shaar_crepe' });
+    expect(parseTiktok('https://www.tiktok.com/@shaar.crepe?lang=ar&is_from_webapp=1')).toEqual({ ok: true, value: 'https://www.tiktok.com/@shaar.crepe' });
+    expect(parseTiktok('https://m.tiktok.com/@shaar.crepe/')).toEqual({ ok: true, value: 'https://www.tiktok.com/@shaar.crepe' });
+  });
+  it('TikTok: refuses other sites, videos, short redirect links and bad names', () => {
+    for (const bad of [
+      'https://vm.tiktok.com/ZMabc123/', 'https://www.tiktok.com/@shaar/video/7123456789', 'https://www.tiktok.com/discover',
+      'https://www.tiktok.com.evil.com/@shaar', 'http://www.tiktok.com/@shaar', 'https://instagram.com/shaar', 'https://user:pw@www.tiktok.com/@shaar',
+      'a', 'shaar.', 'a b', 'x'.repeat(25), 'م'.repeat(5), 'https://www.tiktok.com/', 'https://www.tiktok.com/@',
+    ]) {
+      expect(parseTiktok(bad).ok, bad).toBe(false);
+    }
+  });
   it('Facebook: page name or a page link, rebuilt in one safe shape', () => {
     expect(parseFacebook('shaarcrepe')).toEqual({ ok: true, value: 'https://www.facebook.com/shaarcrepe' });
     expect(parseFacebook('https://fb.me/shaarcrepe')).toEqual({ ok: true, value: 'https://www.facebook.com/shaarcrepe' });
@@ -104,7 +121,7 @@ async function setup() {
   const b = await add.tenant(pg, 'beta');
   return { pg, a, b };
 }
-const settings = (over = {}) => ({ name: 'New name', currencies: 'USD' as const, phone: '', mapUrl: '', instagram: '', facebook: '', ...over });
+const settings = (over = {}) => ({ name: 'New name', currencies: 'USD' as const, phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '', ...over });
 
 describe('saveSettings', () => {
   it('saves name, currency, phone and map; the public link stays the same', async () => {
@@ -121,8 +138,14 @@ describe('saveSettings', () => {
     await saveSettings(pg, b.ownerId, settings({ instagram: '', facebook: 'betafood' }));
     expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ instagram_url: 'https://www.instagram.com/alpha.food', facebook_url: null });
     expect(await getOwnerRestaurant(pg, b.ownerId)).toMatchObject({ instagram_url: null, facebook_url: 'https://www.facebook.com/betafood' });
-    await saveSettings(pg, a.ownerId, settings({ instagram: '', facebook: '' })); // can be removed again
+    await saveSettings(pg, a.ownerId, settings({ instagram: '', facebook: '', tiktok: '' })); // can be removed again
     expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ instagram_url: null, facebook_url: null });
+    // TikTok is saved the same way, and a bad one is refused without touching the others
+    expect(await saveSettings(pg, a.ownerId, settings({ tiktok: 'alpha.food' }))).toMatchObject({ ok: true });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ tiktok_url: 'https://www.tiktok.com/@alpha.food' });
+    expect(await getOwnerRestaurant(pg, b.ownerId)).toMatchObject({ tiktok_url: null });
+    expect(await saveSettings(pg, a.ownerId, settings({ tiktok: 'https://vm.tiktok.com/x/' }))).toMatchObject({ ok: false });
+    expect(await getOwnerRestaurant(pg, a.ownerId)).toMatchObject({ tiktok_url: 'https://www.tiktok.com/@alpha.food' });
     expect(await saveSettings(pg, a.ownerId, settings({ instagram: 'https://evil.com/x' }))).toMatchObject({ ok: false, status: 400 });
   });
   it('does not touch another restaurant', async () => {
