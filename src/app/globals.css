@@ -59,6 +59,7 @@ button, input { font: inherit; color: inherit; }
 .nav-link { padding: 10px 12px; border-radius: 10px; color: var(--ink); text-decoration: none; }
 .nav-link.active { background: var(--bg); font-weight: 700; color: var(--brand); }
 .side .spacer { flex: 1; }
+.side .view-menu { text-decoration: none; text-align: center; margin: 4px 0 6px; padding: 10px 12px; }
 .who { font-size: .8rem; color: var(--muted); padding: 0 8px 8px; word-break: break-all; }
 .main { padding: 24px; max-width: 980px; width: 100%; }
 .main h1 { margin: 0 0 20px; font-size: 1.5rem; }
@@ -80,6 +81,7 @@ button, input { font: inherit; color: inherit; }
   .side .logo { flex-basis: 100%; }
   .nav-link { padding: 8px 10px; }
   .side .btn.ghost { margin-inline-start: auto; }
+  .side .view-menu { width: auto; margin: 0; padding: 8px 12px; } /* in the top bar it is one button among the links */
   .main { padding: 16px; }
 }
 
