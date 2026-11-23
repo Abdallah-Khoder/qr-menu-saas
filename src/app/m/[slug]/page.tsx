@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache, type CSSProperties } from 'react';
 import FloatingContacts from '@/components/FloatingContacts';
+import PreviewBar from '@/components/PreviewBar';
 import PublicPhoto from '@/components/PublicPhoto';
 import PublicSizes from '@/components/PublicSizes';
 import RefreshOnReturn from '@/components/RefreshOnReturn';
@@ -47,6 +48,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
   const links = contactLinks({ phone: menu.phone, instagram: menu.instagram, facebook: menu.facebook, tiktok: menu.tiktok, mapUrl: menu.mapUrl });
   return (
     <main className="pm" dir={menu.direction}>
+      <PreviewBar />
       <RefreshOnReturn />
       <header className="pm-head">
         <h1><bdi>{menu.name}</bdi></h1>
