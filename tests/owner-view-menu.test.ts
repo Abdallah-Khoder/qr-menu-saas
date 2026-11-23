@@ -17,15 +17,15 @@ const home = async () => renderToStaticMarkup(await OwnerHome());
 beforeEach(() => { vi.stubEnv('APP_URL', 'https://menu.example.com'); });
 
 describe('the owner can open his own menu from the dashboard', () => {
-  it('the side bar (so every dashboard page) has a button that opens HIS menu in a new tab', async () => {
+  it('the side bar (so every dashboard page) has a button that opens HIS menu, in the same tab, as a preview', async () => {
     mocks.restaurant = restaurant('active');
     const html = await layout();
-    expect(html).toContain(`<a class="btn view-menu" href="/m/${SLUG}" target="_blank" rel="noopener noreferrer">عرض قائمتي ↗</a>`);
+    expect(html).toContain(`<a class="btn view-menu" href="/m/${SLUG}?preview=1">عرض قائمتي</a>`);
   });
   it('the home page has the same button, next to the link and the QR code', async () => {
     mocks.restaurant = restaurant('active');
     const html = await home();
-    expect(html).toContain(`<a class="btn" href="/m/${SLUG}" target="_blank" rel="noopener noreferrer">عرض قائمتي كما يراها الزبائن ↗</a>`);
+    expect(html).toContain(`<a class="btn" href="/m/${SLUG}?preview=1">عرض قائمتي كما يراها الزبائن</a>`);
   });
   it('a suspended restaurant has no such button (its menu is not shown to anyone), only the banner', async () => {
     mocks.restaurant = restaurant('suspended');
@@ -33,7 +33,7 @@ describe('the owner can open his own menu from the dashboard', () => {
     expect(l).not.toContain('view-menu');
     expect(l).not.toContain('href="/m/');
     expect(l).toContain('role="alert"');
-    expect(await home()).not.toContain('target="_blank"');
+    expect(await home()).not.toContain('?preview=1');
   });
   it('an account without a restaurant gets no button either', async () => {
     mocks.restaurant = null;

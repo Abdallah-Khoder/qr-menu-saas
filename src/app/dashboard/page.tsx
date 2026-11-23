@@ -23,7 +23,7 @@ export default async function OwnerHome() {
         <h2>قائمة الزبائن</h2>
         <p className="note">هذا الرابط ورمز QR هما ما يراه زبائنك. ضع الرمز على الطاولات والرابط على إنستغرام وواتساب.</p>
         {restaurant.status === 'active' && (
-          <p><ViewMenuLink slug={restaurant.public_slug} className="btn">عرض قائمتي كما يراها الزبائن ↗</ViewMenuLink></p>
+          <p><ViewMenuLink slug={restaurant.public_slug} className="btn">عرض قائمتي كما يراها الزبائن</ViewMenuLink></p>
         )}
         <CopyField label="رابط قائمتك للزبائن" value={menuLink} />
         <div className="qr-box">

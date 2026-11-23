@@ -205,6 +205,9 @@ fieldset.plain:disabled { opacity: .6; }
 
 /* Public menu (what customers see) */
 html { scroll-behavior: smooth; }
+/* the owner's bar (PreviewBar): only on the page he opened from the dashboard; stuck to the top so the way back is always there */
+.pm-preview { position: sticky; top: 0; z-index: 40; margin: 0 -16px; padding: 10px 16px; background: var(--brand); color: var(--on-brand); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; font-size: .95rem; }
+.pm-preview a { color: var(--on-brand); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .pm { max-width: 1040px; margin: 0 auto; padding: 0 16px 96px; } /* room at the bottom so the floating buttons never cover the last card */
 .pm-head { text-align: center; padding: 28px 0 14px; }
 .pm-head h1 { margin: 0 0 14px; font-size: 1.7rem; }

@@ -39,6 +39,12 @@ describe('the public page follows the direction the owner chose', () => {
       expect(html, direction).toContain('><bdi>Crepe</bdi></a>'); // the section chip
     }
   });
+  it('a customer\'s page has no owner bar, and the owner\'s ?preview=1 is not read by the server (the page stays the same for everybody)', async () => {
+    for (const direction of ['rtl', 'ltr'] as const) expect(await render({ direction }), direction).not.toContain('pm-preview');
+    const source = readFileSync('src/app/m/[slug]/page.tsx', 'utf8');
+    expect(source).toContain('<PreviewBar />');
+    expect(source).not.toMatch(/searchParams|cookies\(|headers\(/); // reading any of these would make every customer's page dynamic and slower
+  });
   it('the contact button is on the page in both directions', async () => {
     for (const direction of ['rtl', 'ltr'] as const) expect(await render({ direction }), direction).toContain('pm-float-toggle');
   });
