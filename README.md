@@ -127,6 +127,8 @@ the restaurant name itself is stored and shown exactly as typed. A name with no 
 ## Owner dashboard (`/dashboard`)
 
 Pages: Home (menu link, dashboard link, a QR code for each), Menu (categories), Settings.
+A "عرض قائمتي" button (in the side bar of every page, and on the Home page) opens the owner's own public menu in a new tab,
+so he sees exactly what his customers see. It is hidden while the restaurant is suspended (nobody can see the menu then).
 Everything an owner can do is under `/api/owner/*`. The guard order is: 401 (not logged in) →
 403 (not an owner) → 415 (not JSON) → 404 (bad id) → 400 (bad body).
 

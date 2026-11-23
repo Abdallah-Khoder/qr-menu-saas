@@ -4,6 +4,7 @@ import NavLinks from '@/components/NavLinks';
 import { requireOwner } from '@/lib/current-user';
 import { SUSPENDED_MESSAGE } from '@/lib/owner-menu';
 import { getMyRestaurant } from '@/lib/owner-page';
+import ViewMenuLink from '@/components/ViewMenuLink';
 
 const LINKS = [
   { href: '/dashboard', label: 'الرئيسية' },
@@ -22,6 +23,9 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     <div className="shell">
       <aside className="side">
         <Brand />
+        {restaurant?.status === 'active' && (
+          <ViewMenuLink slug={restaurant.public_slug} className="btn view-menu">عرض قائمتي ↗</ViewMenuLink>
+        )}
         <NavLinks links={LINKS} />
         <div className="spacer" />
         <div className="who" dir="ltr">{user.email}</div>

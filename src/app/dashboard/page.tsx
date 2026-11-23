@@ -4,6 +4,7 @@ import { appUrl } from '@/lib/app-url';
 import { requireOwner } from '@/lib/current-user';
 import { getMyRestaurant } from '@/lib/owner-page';
 import { qrSvg } from '@/lib/qr';
+import ViewMenuLink from '@/components/ViewMenuLink';
 
 export default async function OwnerHome() {
   const user = await requireOwner(); // the page that reads data checks by itself
@@ -21,6 +22,9 @@ export default async function OwnerHome() {
       <section className="panel">
         <h2>قائمة الزبائن</h2>
         <p className="note">هذا الرابط ورمز QR هما ما يراه زبائنك. ضع الرمز على الطاولات والرابط على إنستغرام وواتساب.</p>
+        {restaurant.status === 'active' && (
+          <p><ViewMenuLink slug={restaurant.public_slug} className="btn">عرض قائمتي كما يراها الزبائن ↗</ViewMenuLink></p>
+        )}
         <CopyField label="رابط قائمتك للزبائن" value={menuLink} />
         <div className="qr-box">
           <span className="copy-label">رمز QR لقائمتك (اطبعه وضعه على الطاولات)</span>
