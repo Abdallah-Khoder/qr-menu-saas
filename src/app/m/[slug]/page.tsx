@@ -46,10 +46,10 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
   const { menu } = result;
   const links = contactLinks({ phone: menu.phone, instagram: menu.instagram, facebook: menu.facebook, tiktok: menu.tiktok, mapUrl: menu.mapUrl });
   return (
-    <main className="pm">
+    <main className="pm" dir={menu.direction}>
       <RefreshOnReturn />
       <header className="pm-head">
-        <h1 dir="auto">{menu.name}</h1>
+        <h1><bdi>{menu.name}</bdi></h1>
       </header>
 
       {menu.categories.length === 0 ? (
@@ -58,19 +58,19 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
         <>
           <nav className="pm-tabs" aria-label="الأقسام">
             {menu.categories.map((c, i) => (
-              <a key={i} href={`#c${i}`} dir="auto" style={place(i)}>{c.name}</a>
+              <a key={i} href={`#c${i}`} style={place(i)}><bdi>{c.name}</bdi></a>
             ))}
           </nav>
           {menu.categories.map((c, i) => (
             <section key={i} id={`c${i}`} className="pm-cat">
-              <h2 dir="auto">{c.name}</h2>
+              <h2><bdi>{c.name}</bdi></h2>
               <ul className="pm-items">
                 {c.items.map((item, j) => (
                   <li key={j} className="pm-item" style={place(j)}>
                     {item.image && <PublicPhoto src={item.image} />}
                     <div className="pm-info">
-                      <b dir="auto">{item.name}</b>
-                      {item.description && <p dir="auto">{item.description}</p>}
+                      <b><bdi>{item.name}</bdi></b>
+                      {item.description && <p><bdi>{item.description}</bdi></p>}
                     </div>
                     <Price item={item} currencies={menu.currencies} />
                   </li>

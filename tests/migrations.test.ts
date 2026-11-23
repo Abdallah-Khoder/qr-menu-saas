@@ -16,7 +16,7 @@ describe('migration runner', () => {
   it('applies the real migrations and creates all the tables', async () => {
     const pg = new PGlite();
     const ran = await migrate(pg, 'db/migrations');
-    expect(ran).toEqual(['001_init.sql', '002_login_attempts.sql', '003_login_attempts_request_id.sql', '004_social_links.sql', '005_item_available.sql', '006_items_restaurant_idx.sql', '007_password_reset.sql', '008_tiktok.sql']);
+    expect(ran).toEqual(['001_init.sql', '002_login_attempts.sql', '003_login_attempts_request_id.sql', '004_social_links.sql', '005_item_available.sql', '006_items_restaurant_idx.sql', '007_password_reset.sql', '008_tiktok.sql', '009_menu_direction.sql']);
     expect(await tables(pg)).toEqual(
       ['categories', 'email_codes', 'invites', 'item_sizes', 'items', 'login_attempts', 'restaurants', 'schema_migrations', 'users'],
     );

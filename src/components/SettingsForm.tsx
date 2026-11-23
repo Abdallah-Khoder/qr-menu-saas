@@ -6,7 +6,7 @@ import { useHydrated } from '@/lib/use-hydrated';
 
 type R = {
   name: string; currencies: 'USD' | 'LBP' | 'BOTH'; phone_number: string | null; map_url: string | null;
-  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null;
+  instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null; menu_direction: 'rtl' | 'ltr';
 };
 
 export default function SettingsForm({ restaurant, disabled = false }: { restaurant: R; disabled?: boolean }) {
@@ -26,6 +26,7 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
     const problem = await postJson('/api/owner/settings', {
       name: text('name'), currencies: text('currencies'), phone: text('phone'),
       mapUrl: text('mapUrl'), instagram: text('instagram'), facebook: text('facebook'), tiktok: text('tiktok'),
+      direction: text('direction'),
     });
     setBusy(false);
     if (problem) return setError(problem);
@@ -51,6 +52,17 @@ export default function SettingsForm({ restaurant, disabled = false }: { restaur
           </label>
         ))}
       </fieldset>
+
+      <fieldset className="choice">
+        <legend>اتجاه القائمة</legend>
+        {([['rtl', 'من اليمين إلى اليسار (للعربية)'], ['ltr', 'من اليسار إلى اليمين (للإنكليزية)']] as const).map(([value, label]) => (
+          <label key={value}>
+            <input type="radio" name="direction" value={value} defaultChecked={restaurant.menu_direction === value} />
+            {label}
+          </label>
+        ))}
+      </fieldset>
+      <p className="note">يحدّد هذا مكان الأسماء والأسعار والأزرار في الصفحة التي يراها زبائنك.</p>
 
       <div className="form-grid">
         <label className="field">

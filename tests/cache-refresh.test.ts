@@ -65,6 +65,17 @@ describe('owner changes refresh the cached public menu', () => {
     expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
   });
 
+  it('the menu direction: a valid choice is saved and refreshes the menu; an unknown one is refused (400) and refreshes nothing', async () => {
+    const { pg, a } = await setup();
+    mocks.user.current = owner(a.ownerId);
+    const body = { name: 'New name', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '' };
+    expect((await saveSettings(json({ ...body, direction: 'sideways' }))).status).toBe(400);
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
+    expect((await saveSettings(json({ ...body, direction: 'ltr' }))).status).toBe(200);
+    expect(mocks.revalidateTag).toHaveBeenCalledWith('menu:alpha-k3x9qp7vtz', { expire: 0 });
+    expect((await pg.query(`SELECT menu_direction FROM restaurants WHERE public_slug = 'alpha-k3x9qp7vtz'`)).rows[0]).toEqual({ menu_direction: 'ltr' });
+  });
+
   it('if the link of the restaurant cannot be read, NOTHING is saved (never "error" for a change that was saved)', async () => {
     const { pg, a } = await setup();
     mocks.user.current = owner(a.ownerId);
