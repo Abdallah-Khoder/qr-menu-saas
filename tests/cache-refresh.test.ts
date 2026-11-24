@@ -22,6 +22,7 @@ import { POST as saveSettings } from '../src/app/api/owner/settings/route';
 import { POST as deleteRestaurant } from '../src/app/api/admin/restaurants/[id]/delete/route';
 import { POST as setStatus } from '../src/app/api/admin/restaurants/[id]/status/route';
 import { getCachedPublicMenu, MENU_CACHE_SECONDS } from '../src/lib/public-cache';
+import { PUBLIC_MENU_VERSION } from '../src/lib/public-menu';
 
 const json = (body: unknown) => new Request('http://x/api', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -180,9 +181,26 @@ describe('getCachedPublicMenu', () => {
     const result = await getCachedPublicMenu('alpha-k3x9qp7vtz');
     expect(result.state).toBe('ok');
     const [, keyParts, options] = mocks.unstable_cache.mock.calls[0];
-    expect(keyParts).toEqual(['public-menu', 'alpha-k3x9qp7vtz']);
+    expect(keyParts).toEqual(['public-menu', PUBLIC_MENU_VERSION, 'alpha-k3x9qp7vtz']);
     expect(options).toEqual({ tags: ['menu:alpha-k3x9qp7vtz'], revalidate: MENU_CACHE_SECONDS });
     expect(MENU_CACHE_SECONDS).toBe(300);
+    expect(a.restaurantId).toBeTruthy();
+  });
+
+  it('a menu stored by the OLD code (before a deploy that changed its shape) is never read by the new code', async () => {
+    const { a } = await setup();
+    // Next keeps its cache across deployments: pretend an entry written by the previous version is still there, under the old key
+    const store = new Map<string, unknown>([[JSON.stringify(['public-menu', 'alpha-k3x9qp7vtz']), {
+      state: 'ok', menu: { name: 'Old shape', currencies: 'USD', phone: null, mapUrl: null, instagram: null, facebook: null, tiktok: null, categories: [] },
+    }]]);
+    mocks.unstable_cache.mockImplementation((fn: () => Promise<unknown>, keyParts: string[]) => async () => {
+      const key = JSON.stringify(keyParts);
+      if (!store.has(key)) store.set(key, await fn());
+      return store.get(key);
+    });
+    const result = await getCachedPublicMenu('alpha-k3x9qp7vtz');
+    expect(result).toMatchObject({ state: 'ok', menu: { name: 'Some restaurant', locations: [] } });
+    expect(JSON.stringify(result)).not.toContain('Old shape');
     expect(a.restaurantId).toBeTruthy();
   });
 

@@ -67,11 +67,12 @@ export type LocationInput = { name: string; mapUrl: string };
 function parseLocations(
   list: LocationInput[],
 ): { ok: true; value: { name: string; map_url: string; sort_order: number }[] } | { ok: false; error: string } {
-  const rows = list.filter((l) => l.name.trim() !== '' || l.mapUrl.trim() !== '');
+  // `shown` = the row as the owner sees it on the page (a blank row above still counts), `sort_order` = the place among the saved ones
+  const rows = list.map((l, i) => ({ ...l, shown: i + 1 })).filter((l) => l.name.trim() !== '' || l.mapUrl.trim() !== '');
   if (rows.length > MAX_LOCATIONS) return { ok: false, error: `لا يمكن إضافة أكثر من ${MAX_LOCATIONS} فرعًا` };
   const value: { name: string; map_url: string; sort_order: number }[] = [];
   for (const [i, row] of rows.entries()) {
-    const at = `الفرع رقم ${i + 1}: `;
+    const at = `الفرع رقم ${row.shown}: `;
     const name = checkName(row.name, 'اسم الفرع');
     if (!name.ok) return { ok: false, error: at + name.error };
     const map = parseMapUrl(row.mapUrl);

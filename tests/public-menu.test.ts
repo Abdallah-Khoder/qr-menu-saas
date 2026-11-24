@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEST_BLOB_HOST, add, makeDb, photoUrl } from './helpers';
-import { getPublicMenu, whatsappUrl } from '../src/lib/public-menu';
+import { PUBLIC_MENU_VERSION, getPublicMenu, whatsappUrl } from '../src/lib/public-menu';
 import { createCategory, listCategories, saveSettings } from '../src/lib/owner-menu';
 import { createItem, listItems, setItemAvailable, type ItemInput } from '../src/lib/owner-items';
 
@@ -81,6 +81,18 @@ describe('getPublicMenu', () => {
     }
     const never = { query: () => { throw new Error('database was asked'); } };
     expect(await getPublicMenu(never as never, "x'; DROP TABLE users;--")).toEqual({ state: 'missing' });
+  });
+
+  it('the SHAPE of the menu is pinned: if this fails, bump PUBLIC_MENU_VERSION (the cache keeps old shapes across deployments)', async () => {
+    const { pg, a, drinks } = await setup();
+    await createItem(pg, a.ownerId, input(drinks, { name: 'Cola', description: 'cold', priceUsd: '', sizes: [{ label: 'S', priceUsd: '1', priceLbp: '' }, { label: 'L', priceUsd: '2', priceLbp: '' }] }));
+    const menu = await menuOf(pg);
+    const keys = (o: object) => Object.keys(o).sort();
+    expect(keys(menu)).toEqual(['categories', 'currencies', 'direction', 'facebook', 'instagram', 'locations', 'name', 'phone', 'tiktok']);
+    expect(keys(menu.categories[0])).toEqual(['items', 'name']);
+    expect(keys(menu.categories[0].items[0])).toEqual(['description', 'image', 'name', 'price_lbp', 'price_usd', 'sizes']);
+    expect(keys(menu.categories[0].items[0].sizes[0])).toEqual(['label', 'price_lbp', 'price_usd']);
+    expect(PUBLIC_MENU_VERSION).toBe('v2'); // v1 = the shape with mapUrl (before the branches)
   });
 
   it('gives only the contact data the owner filled in', async () => {

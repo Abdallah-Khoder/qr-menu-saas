@@ -209,7 +209,8 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   The public menu gets the branches in the same single cached query (nothing extra to wait for), and a suspended
   restaurant shows none. On the page the map is still ONE icon: with one branch it opens that map, with several it
   opens a small list of the branch names (closes with an outside tap or Escape), each name opening its own map.
-  The WhatsApp number is still one per restaurant for now.
+  The WhatsApp number is still one per restaurant for now. Migration 010 stops (and changes nothing) if some
+  restaurant has an old map link longer than 500 characters, naming those restaurants, instead of dropping the link.
 - **Contact icons:** round icon buttons for WhatsApp (`wa.me`, digits only), Instagram, Facebook, TikTok and the map
   (no call button: customers reach the restaurant on WhatsApp). Only the ones the owner filled in. External links
   open in a new tab with `rel="noopener noreferrer"`. The four brand glyphs are inline SVG from
@@ -246,6 +247,10 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   The owner's restaurant link is read BEFORE his change is saved, so a failing read stops everything before anything
   is saved. The refresh AFTER the save only logs a failure (the change is saved, so the answer stays "ok" and the
   old copy ends by itself within 5 minutes).
+  **The cache survives a deployment**, so right after a deploy the new code can meet a menu that the OLD code stored.
+  The key therefore carries `PUBLIC_MENU_VERSION` (`src/lib/public-menu.ts`): whenever the shape of the public menu
+  changes, change that number and the new code ignores every old entry. A test pins the shape and fails as a reminder,
+  and another one pretends an old-shape entry is still stored and checks that it is never read.
 
 ## Printing and downloading the QR code (`/dashboard/qr`)
 

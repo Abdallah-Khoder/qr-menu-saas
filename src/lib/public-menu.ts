@@ -10,6 +10,10 @@ export type PublicItem = {
 };
 export type PublicLocation = { name: string; url: string };
 export type PublicCategory = { name: string; items: PublicItem[] };
+// The cache keeps menus ACROSS deployments: right after a deploy, the new code can meet a menu that the OLD code put there.
+// So whenever the shape of PublicMenu changes (a field added, renamed or removed), change this number: the new code then
+// ignores everything written by the old one. (tests/public-menu.test.ts fails when the shape changes, as a reminder.)
+export const PUBLIC_MENU_VERSION = 'v2';
 export type PublicMenu = {
   name: string; currencies: 'USD' | 'LBP' | 'BOTH';
   phone: string | null; instagram: string | null; facebook: string | null; tiktok: string | null;

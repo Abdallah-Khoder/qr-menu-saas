@@ -124,6 +124,25 @@ describe('saving the branches in the settings', () => {
     expect(r!.locations).toEqual([{ name: 'Keep', map_url: MAP1 }]);
   });
 
+  it('the error names the row as the owner SEES it on the page, even when blank rows above it were ignored', async () => {
+    const { pg, a } = await setup();
+    const say = async (locations: { name: string; mapUrl: string }[]) => {
+      const out = await saveSettings(pg, a.ownerId, { ...base, locations });
+      expect(out).toMatchObject({ ok: false, status: 400 });
+      return (out as { error: string }).error;
+    };
+    expect(await say([branch('', ''), branch('Named, no link', '')])).toContain('الفرع رقم 2:');
+    expect(await say([branch('One', MAP1), branch(' ', ' '), branch('', 'http://bad.example.com')])).toContain('الفرع رقم 3:');
+    expect(await say([branch('', ''), branch('', ''), branch('🍕', MAP1)])).toContain('الفرع رقم 3:');
+  });
+
+  it('the saved order has no gaps, whatever blank rows were between the branches', async () => {
+    const { pg, a } = await setup();
+    await saveSettings(pg, a.ownerId, { ...base, locations: [branch('', ''), branch('A', MAP1), branch('', ''), branch('', ''), branch('B', MAP2)] });
+    const rows = (await pg.query(`SELECT name, sort_order FROM restaurant_locations ORDER BY sort_order`)).rows;
+    expect(rows).toEqual([{ name: 'A', sort_order: 0 }, { name: 'B', sort_order: 1 }]);
+  });
+
   it('a refused currency change (409) leaves the branches as they were', async () => {
     const { pg, a } = await setup();
     await saveSettings(pg, a.ownerId, { ...base, locations: [branch('Keep', MAP1)] });
@@ -259,6 +278,36 @@ describe('migration 010 keeps the map link every restaurant already had', () => 
     expect(rows.filter((r) => r.restaurant_id === withMap.restaurantId)).toEqual([{ restaurant_id: withMap.restaurantId, name: 'الفرع الرئيسي', map_url: MAP1, sort_order: 0 }]);
     expect(rows.some((r) => r.restaurant_id === without.restaurantId)).toBe(false);
     expect(rows.filter((r) => r.restaurant_id === tooLong.restaurantId)).toHaveLength(1); // exactly 500 characters still fits
+  });
+});
+
+describe('migration 010 does not drop a long map link silently', () => {
+  const longLink = 'https://maps.example.com/' + 'a'.repeat(476); // 501 characters
+  async function oldDatabase() {
+    const dir = mkdtempSync(join(tmpdir(), 'mig-'));
+    const all = readdirSync('db/migrations').filter((f) => f.endsWith('.sql')).sort();
+    for (const f of all.filter((f) => f !== '010_locations.sql')) copyFileSync(join('db/migrations', f), join(dir, f));
+    const pg = new PGlite();
+    await migrate(pg, dir);
+    copyFileSync(join('db/migrations', '010_locations.sql'), join(dir, '010_locations.sql'));
+    return { pg, dir };
+  }
+
+  it('it stops, names the restaurants, and changes nothing at all', async () => {
+    const { pg, dir } = await oldDatabase();
+    const fine = await add.tenant(pg, 'fine');
+    const long1 = await add.tenant(pg, 'longone');
+    await add.tenant(pg, 'longtwo');
+    await pg.query(`UPDATE restaurants SET map_url = $2 WHERE id = $1`, [fine.restaurantId, MAP1]);
+    await pg.query(`UPDATE restaurants SET map_url = $1 WHERE public_slug IN ('longone-k3x9qp7vtz', 'longtwo-k3x9qp7vtz')`, [longLink]);
+    await expect(migrate(pg, dir)).rejects.toThrow(/longer than 500 characters for: .*longone-k3x9qp7vtz.*longtwo-k3x9qp7vtz/);
+    expect((await pg.query(`SELECT to_regclass('restaurant_locations') AS t`)).rows[0]).toEqual({ t: null }); // rolled back: no table
+    expect((await pg.query(`SELECT count(*)::int AS n FROM schema_migrations WHERE filename = '010_locations.sql'`)).rows[0]).toEqual({ n: 0 });
+    // after someone shortens the links, the same migration goes through and keeps every link
+    await pg.query(`UPDATE restaurants SET map_url = $1 WHERE public_slug IN ('longone-k3x9qp7vtz', 'longtwo-k3x9qp7vtz')`, [MAP3]);
+    await migrate(pg, dir);
+    expect((await pg.query(`SELECT count(*)::int AS n FROM restaurant_locations`)).rows[0]).toEqual({ n: 3 });
+    expect(long1.restaurantId).toBeTruthy();
   });
 });
 
