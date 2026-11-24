@@ -6,11 +6,11 @@ const Body = z.object({
   name: z.string().max(400),
   currencies: z.enum(['USD', 'LBP', 'BOTH']),
   phone: z.string().max(100),
-  mapUrl: z.string().max(1000),
   instagram: z.string().max(1000),
   facebook: z.string().max(1000),
   tiktok: z.string().max(1000),
   direction: z.enum(['rtl', 'ltr']).optional(),
+  locations: z.array(z.object({ name: z.string().max(400), mapUrl: z.string().max(1000) })).max(60).optional(),
 });
 
 export async function POST(request: Request) {

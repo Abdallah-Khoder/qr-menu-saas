@@ -85,17 +85,17 @@ describe('getPublicMenu', () => {
 
   it('gives only the contact data the owner filled in', async () => {
     const { pg, a } = await setup();
-    expect(await menuOf(pg)).toMatchObject({ phone: null, mapUrl: null, instagram: null, facebook: null, tiktok: null });
-    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '03 123 456', mapUrl: '', instagram: '@alpha.food', facebook: '', tiktok: '' });
+    expect(await menuOf(pg)).toMatchObject({ phone: null, locations: [], instagram: null, facebook: null, tiktok: null });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '03 123 456', instagram: '@alpha.food', facebook: '', tiktok: '' });
     expect(await menuOf(pg)).toMatchObject({ name: 'Alpha', phone: '+9613123456', instagram: 'https://www.instagram.com/alpha.food', facebook: null, tiktok: null });
-    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '@alpha.food' });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', instagram: '', facebook: '', tiktok: '@alpha.food' });
     expect(await menuOf(pg)).toMatchObject({ phone: null, instagram: null, tiktok: 'https://www.tiktok.com/@alpha.food' });
   });
 
   it('gives the direction the owner chose (right to left until he changes it)', async () => {
     const { pg, a } = await setup();
     expect(await menuOf(pg)).toMatchObject({ direction: 'rtl' });
-    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '', direction: 'ltr' });
+    await saveSettings(pg, a.ownerId, { name: 'Alpha', currencies: 'USD', phone: '', instagram: '', facebook: '', tiktok: '', direction: 'ltr' });
     expect(await menuOf(pg)).toMatchObject({ direction: 'ltr' });
   });
 

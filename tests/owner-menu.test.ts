@@ -121,15 +121,15 @@ async function setup() {
   const b = await add.tenant(pg, 'beta');
   return { pg, a, b };
 }
-const settings = (over = {}) => ({ name: 'New name', currencies: 'USD' as const, phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '', ...over });
+const settings = (over = {}) => ({ name: 'New name', currencies: 'USD' as const, phone: '', instagram: '', facebook: '', tiktok: '', ...over });
 
 describe('saveSettings', () => {
-  it('saves name, currency, phone and map; the public link stays the same', async () => {
+  it('saves name, currency and phone; the public link stays the same', async () => {
     const { pg, a } = await setup();
     const before = await getOwnerRestaurant(pg, a.ownerId);
-    expect(await saveSettings(pg, a.ownerId, settings({ name: ' مطعم جديد ', currencies: 'BOTH', phone: '03 123 456', mapUrl: 'https://maps.app.goo.gl/x' }))).toEqual({ ok: true });
+    expect(await saveSettings(pg, a.ownerId, settings({ name: ' مطعم جديد ', currencies: 'BOTH', phone: '03 123 456' }))).toEqual({ ok: true });
     const after = await getOwnerRestaurant(pg, a.ownerId);
-    expect(after).toMatchObject({ name: 'مطعم جديد', currencies: 'BOTH', phone_number: '+9613123456', map_url: 'https://maps.app.goo.gl/x' });
+    expect(after).toMatchObject({ name: 'مطعم جديد', currencies: 'BOTH', phone_number: '+9613123456' });
     expect(after!.public_slug).toBe(before!.public_slug);
   });
   it('social links: each one optional, any combination, saved per restaurant', async () => {
@@ -172,7 +172,7 @@ describe('saveSettings', () => {
   });
   it('refuses bad input with 400 and changes nothing', async () => {
     const { pg, a } = await setup();
-    for (const over of [{ name: '🍕' }, { name: '   ' }, { name: 'x'.repeat(81) }, { phone: 'abc' }, { mapUrl: 'http://x.com' }]) {
+    for (const over of [{ name: '🍕' }, { name: '   ' }, { name: 'x'.repeat(81) }, { phone: 'abc' }, { locations: [{ name: 'x', mapUrl: 'http://x.com' }] }]) {
       const out = await saveSettings(pg, a.ownerId, settings(over));
       expect(out).toMatchObject({ ok: false, status: 400 });
     }

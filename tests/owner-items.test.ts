@@ -167,7 +167,7 @@ describe('updateItem', () => {
     const { pg, a, burgers } = await setup('BOTH');
     await createItem(pg, a.ownerId, input(burgers, { priceUsd: '5', priceLbp: '450000' }));
     await createItem(pg, a.ownerId, input(burgers, { name: 'Sized', sizes: sizes(['S', '3', '270000'], ['M', '4', '360000']) }));
-    await saveSettings(pg, a.ownerId, { name: 'R', currencies: 'USD', phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '' });
+    await saveSettings(pg, a.ownerId, { name: 'R', currencies: 'USD', phone: '', instagram: '', facebook: '', tiktok: '' });
     for (const item of await listItems(pg, a.ownerId)) {
       // the form of a dollar-only restaurant never sends lira prices
       await updateItem(pg, a.ownerId, item.id, input(burgers, { name: item.name + '!', priceUsd: '6', sizes: item.sizes.map((s) => ({ label: s.label, priceUsd: '7', priceLbp: '' })) }));
@@ -286,7 +286,7 @@ describe('listItems', () => {
 });
 
 describe('filling the missing prices of the other currency', () => {
-  const settings = (currencies: 'USD' | 'LBP' | 'BOTH') => ({ name: 'R', currencies, phone: '', mapUrl: '', instagram: '', facebook: '', tiktok: '' });
+  const settings = (currencies: 'USD' | 'LBP' | 'BOTH') => ({ name: 'R', currencies, phone: '', instagram: '', facebook: '', tiktok: '' });
   const entry = (itemId: string, price: string, label = '') => ({ itemId, label, price });
   async function prepare(currencies: 'USD' | 'LBP' = 'USD') {
     const s = await setup(currencies);

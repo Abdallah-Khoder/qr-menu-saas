@@ -80,7 +80,7 @@ describe('a price on a narrow card (320 px) never runs out of the card', () => {
 });
 
 describe('contact icons on the public page (only in the floating button, nothing under the name)', () => {
-  const none = { phone: null, instagram: null, facebook: null, tiktok: null, mapUrl: null };
+  const none = { phone: null, instagram: null, facebook: null, tiktok: null, locations: [] };
   it('shows no contact button when the owner filled in nothing', () => {
     const html = renderToStaticMarkup(createElement(FloatingContacts, { links: contactLinks(none) }));
     expect(html).not.toContain('pm-float-toggle');
@@ -89,7 +89,7 @@ describe('contact icons on the public page (only in the floating button, nothing
   it('shows ONE round icon per filled link, in a fixed order, each with its own name (no text button, no call link)', () => {
     const links = contactLinks({
       phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a',
-      tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x',
+      tiktok: 'https://www.tiktok.com/@a', locations: [{ name: 'Main', url: 'https://maps.app.goo.gl/x' }],
     });
     const html = renderToStaticMarkup(createElement(FloatingContacts, { links }));
     expect(html.match(/class="pm-icon pm-float-icon"/g)).toHaveLength(5);
@@ -129,7 +129,7 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
   });
   it('entrance animations use "backwards", never "both": a kept end value would block the press and hover effects', () => {
     const entrances = [...css.matchAll(/animation:\s*pm-(?:rise|pop-in)[^;]*;/g)].map((m) => m[0]);
-    expect(entrances).toHaveLength(4); // the name, the round contact button, the section chips, the cards
+    expect(entrances).toHaveLength(5); // the name, the round contact button, the section chips, the cards, the list of branches
     for (const a of entrances) {
       expect(a).toContain('backwards');
       expect(a).not.toMatch(/\bboth\b/);
@@ -143,17 +143,17 @@ describe('the sections wrap instead of scrolling sideways, and the motion respec
 });
 
 describe('the contact links list (feeds the floating contact button)', () => {
-  const all = { phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a', tiktok: 'https://www.tiktok.com/@a', mapUrl: 'https://maps.app.goo.gl/x' };
+  const all = { phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: 'https://www.facebook.com/a', tiktok: 'https://www.tiktok.com/@a', locations: [{ name: 'Main', url: 'https://maps.app.goo.gl/x' }] };
   it('only the filled ones, in a fixed order, with no call link', () => {
     expect(contactLinks(all).map((l) => l.icon)).toEqual(['whatsapp', 'instagram', 'facebook', 'tiktok', 'map']);
-    expect(contactLinks({ ...all, instagram: null, mapUrl: null }).map((l) => l.icon)).toEqual(['whatsapp', 'facebook', 'tiktok']);
-    expect(contactLinks({ phone: null, instagram: null, facebook: null, tiktok: null, mapUrl: null })).toEqual([]);
-    expect(contactLinks(all).some((l) => l.href.startsWith('tel:'))).toBe(false);
+    expect(contactLinks({ ...all, instagram: null, locations: [] }).map((l) => l.icon)).toEqual(['whatsapp', 'facebook', 'tiktok']);
+    expect(contactLinks({ phone: null, instagram: null, facebook: null, tiktok: null, locations: [] })).toEqual([]);
+    expect(contactLinks(all).some((l) => (l.href ?? '').startsWith('tel:'))).toBe(false);
   });
 });
 
 describe('floating buttons', () => {
-  const links = contactLinks({ phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: null, tiktok: null, mapUrl: null });
+  const links = contactLinks({ phone: '+96170123456', instagram: 'https://www.instagram.com/a', facebook: null, tiktok: null, locations: [] });
   it('the contact button is there from the first render (no scroll needed), closed, accessible; the arrow waits for a scroll', () => {
     const html = renderToStaticMarkup(createElement(FloatingContacts, { links }));
     expect(html).toContain('class="pm-float" data-open="false"');
