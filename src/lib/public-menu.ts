@@ -8,10 +8,16 @@ export type PublicSize = { label: string; price_usd: string | null; price_lbp: s
 export type PublicItem = {
   name: string; description: string; image: string | null; price_usd: string | null; price_lbp: string | null; sizes: PublicSize[];
 };
+export type PublicLocation = { name: string; url: string };
 export type PublicCategory = { name: string; items: PublicItem[] };
+// The cache keeps menus ACROSS deployments: right after a deploy, the new code can meet a menu that the OLD code put there.
+// So whenever the shape of PublicMenu changes (a field added, renamed or removed), change this number: the new code then
+// ignores everything written by the old one. (tests/public-menu.test.ts fails when the shape changes, as a reminder.)
+export const PUBLIC_MENU_VERSION = 'v2';
 export type PublicMenu = {
   name: string; currencies: 'USD' | 'LBP' | 'BOTH';
-  phone: string | null; mapUrl: string | null; instagram: string | null; facebook: string | null; tiktok: string | null;
+  phone: string | null; instagram: string | null; facebook: string | null; tiktok: string | null;
+  locations: PublicLocation[]; // the branches, each with its map link (the owner's order)
   direction: 'rtl' | 'ltr'; // which way the page reads (the owner's choice)
   categories: PublicCategory[];
 };
@@ -23,7 +29,7 @@ export const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,59}$/;
 export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult> {
   if (!SLUG_PATTERN.test(slug)) return { state: 'missing' };
   const res = await db.query(
-    `SELECT r.status, r.name, r.currencies, r.phone_number, r.map_url, r.instagram_url, r.facebook_url, r.tiktok_url, r.menu_direction,
+    `SELECT r.status, r.name, r.currencies, r.phone_number, r.instagram_url, r.facebook_url, r.tiktok_url, r.menu_direction,
        CASE WHEN r.status = 'active' THEN COALESCE((
          SELECT json_agg(json_build_object('name', c.name, 'items', (
            SELECT json_agg(json_build_object(
@@ -38,7 +44,11 @@ export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult>
          FROM categories c
          WHERE c.restaurant_id = r.id
            AND EXISTS (SELECT 1 FROM items i WHERE i.category_id = c.id AND i.restaurant_id = r.id AND i.available)
-       ), '[]'::json) ELSE '[]'::json END AS categories
+       ), '[]'::json) ELSE '[]'::json END AS categories,
+       CASE WHEN r.status = 'active' THEN COALESCE((
+         SELECT json_agg(json_build_object('name', l.name, 'url', l.map_url) ORDER BY l.sort_order, l.id)
+         FROM restaurant_locations l WHERE l.restaurant_id = r.id
+       ), '[]'::json) ELSE '[]'::json END AS locations
      FROM restaurants r WHERE r.public_slug = $1`,
     [slug],
   );
@@ -48,7 +58,7 @@ export async function getPublicMenu(db: Db, slug: string): Promise<PublicResult>
   return {
     state: 'ok',
     menu: {
-      name: row.name, currencies: row.currencies, phone: row.phone_number, mapUrl: row.map_url,
+      name: row.name, currencies: row.currencies, phone: row.phone_number, locations: row.locations,
       instagram: row.instagram_url, facebook: row.facebook_url, tiktok: row.tiktok_url, direction: row.menu_direction,
       categories: row.categories,
     },

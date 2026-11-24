@@ -45,7 +45,7 @@ export default async function PublicMenuPage({ params }: { params: Promise<{ slu
     );
   }
   const { menu } = result;
-  const links = contactLinks({ phone: menu.phone, instagram: menu.instagram, facebook: menu.facebook, tiktok: menu.tiktok, mapUrl: menu.mapUrl });
+  const links = contactLinks({ phone: menu.phone, instagram: menu.instagram, facebook: menu.facebook, tiktok: menu.tiktok, locations: menu.locations });
   return (
     <main className="pm" dir={menu.direction}>
       <PreviewBar />

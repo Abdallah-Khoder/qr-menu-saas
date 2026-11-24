@@ -1,7 +1,7 @@
 import { revalidateTag, unstable_cache } from 'next/cache';
 import type { Db } from './db';
 import { getDb } from './db';
-import { SLUG_PATTERN, getPublicMenu, type PublicResult } from './public-menu';
+import { PUBLIC_MENU_VERSION, SLUG_PATTERN, getPublicMenu, type PublicResult } from './public-menu';
 
 // The public menu is read by many customers and changed by few owners, so it is kept in the cache and
 // thrown away THE MOMENT someone changes it (one cache entry per restaurant, named by its public link).
@@ -27,7 +27,7 @@ export async function getCachedPublicMenu(slug: string): Promise<PublicResult> {
       if (result.state === 'missing') throw new NotCached(); // an error is not stored by the cache
       return result;
     },
-    ['public-menu', slug],
+    ['public-menu', PUBLIC_MENU_VERSION, slug],
     { tags: [menuTag(slug)], revalidate: MENU_CACHE_SECONDS },
   );
   try {

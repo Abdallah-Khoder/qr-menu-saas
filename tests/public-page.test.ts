@@ -10,7 +10,7 @@ vi.mock('../src/lib/public-cache', () => ({ getCachedPublicMenu: async () => ({ 
 import PublicMenuPage from '../src/app/m/[slug]/page';
 
 const menu = (over: Partial<PublicMenu> = {}): PublicMenu => ({
-  name: 'jareb', currencies: 'LBP', phone: '+96170123456', mapUrl: null, instagram: null, facebook: null, tiktok: null, direction: 'rtl',
+  name: 'jareb', currencies: 'LBP', phone: '+96170123456', locations: [], instagram: null, facebook: null, tiktok: null, direction: 'rtl',
   categories: [{ name: 'Crepe', items: [{ name: 'Lotus (new!)', description: 'with cream', image: null, price_usd: null, price_lbp: '250000', sizes: [] }] }],
   ...over,
 });

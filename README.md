@@ -62,7 +62,9 @@ If an already-applied file is edited, the runner stops instead of letting dev an
 drift apart. Two runners at the same time are serialized with a per-transaction lock.
 
 Which database is changed depends only on `DATABASE_URL` (copy `.env.example` to `.env.local`).
-Always run a new migration on the **dev** database first, then on production.
+Always run a new migration on the **dev** database first, then on production. A pull request that adds a migration
+must have it run on production (`npm run migrate:prod`) BEFORE it is merged, because merging deploys at once and the
+new code already reads the new table or column.
 
 ## Running it
 
@@ -143,7 +145,7 @@ restaurant's category id just gets 404.
 
 - **Settings:** name (the public link never changes with it, so printed QR codes stay valid), currency
   (`USD`, `LBP` or `BOTH`), phone for WhatsApp (`+961...`; Lebanese local numbers and Arabic digits are accepted),
-  map link (https only), Instagram, Facebook and TikTok (each optional, any combination; account name or the real
+  the branches (see below), Instagram, Facebook and TikTok (each optional, any combination; account name or the real
   link, other websites are refused so an icon can never lead somewhere else; a TikTok short link or a video
   link is refused too, only `tiktok.com/@name` is kept).
 - **Currency change:** refused while some item or size has no price in the chosen currency; the same SQL
@@ -195,6 +197,20 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   all flip together. Names are wrapped in `<bdi>` (not `dir="auto"`), so a name in the other language or with
   punctuation never breaks the line, and every name stays on the same side of its card. The setting is optional in
   the API: a settings page that was opened before the field existed still saves and keeps the restaurant's direction.
+- **Branches:** a restaurant can have several branches (up to `MAX_LOCATIONS` = 20), each with a name and a map link
+  (the same map-site check as before: https and real map sites only). They live in their own table,
+  `restaurant_locations` (`restaurant_id` with `ON DELETE CASCADE`, `name` 1 to 80 characters, `map_url` https only and
+  at most 500 characters, `sort_order`; migration 010, which also turns every restaurant's old `map_url` into one branch
+  called «الفرع الرئيسي»). The old `restaurants.map_url` column is no longer read or written; a later migration will drop
+  it. In the settings the owner adds and removes rows ("+ إضافة فرع" / "حذف") and saves everything with the rest of the
+  settings: when the list is sent it REPLACES the old one, in the same single SQL statement as the other settings (so a
+  refused currency change or a suspended restaurant leaves the branches untouched); when the field is left out the
+  branches stay as they are. Rows left completely blank are ignored; a bad row gives a 400 that names its number.
+  The public menu gets the branches in the same single cached query (nothing extra to wait for), and a suspended
+  restaurant shows none. On the page the map is still ONE icon: with one branch it opens that map, with several it
+  opens a small list of the branch names (closes with an outside tap or Escape), each name opening its own map.
+  The WhatsApp number is still one per restaurant for now. Migration 010 stops (and changes nothing) if some
+  restaurant has an old map link longer than 500 characters, naming those restaurants, instead of dropping the link.
 - **Contact icons:** round icon buttons for WhatsApp (`wa.me`, digits only), Instagram, Facebook, TikTok and the map
   (no call button: customers reach the restaurant on WhatsApp). Only the ones the owner filled in. External links
   open in a new tab with `rel="noopener noreferrer"`. The four brand glyphs are inline SVG from
@@ -231,6 +247,10 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   The owner's restaurant link is read BEFORE his change is saved, so a failing read stops everything before anything
   is saved. The refresh AFTER the save only logs a failure (the change is saved, so the answer stays "ok" and the
   old copy ends by itself within 5 minutes).
+  **The cache survives a deployment**, so right after a deploy the new code can meet a menu that the OLD code stored.
+  The key therefore carries `PUBLIC_MENU_VERSION` (`src/lib/public-menu.ts`): whenever the shape of the public menu
+  changes, change that number and the new code ignores every old entry. A test pins the shape and fails as a reminder,
+  and another one pretends an old-shape entry is still stored and checks that it is never read.
 
 ## Printing and downloading the QR code (`/dashboard/qr`)
 
@@ -289,7 +309,7 @@ What customers see after scanning the QR code (`src/lib/public-menu.ts`, `src/ap
   customer has the page open (and the customer had chosen a size on it), the next item can show that size after the
   refresh. A fix needs an id per item and category in the public data (and in the cache); the harm is only a different
   size on show, one tap to change.
-- Settings: a short note under the map field explains how to copy the link from Google Maps.
+- Settings: a short note under the branches explains how to copy the link from Google Maps.
 
 ## Item photos (Vercel Blob)
 

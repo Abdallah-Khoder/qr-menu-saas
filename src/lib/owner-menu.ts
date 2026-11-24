@@ -1,5 +1,6 @@
 import type { Db } from './db';
 import { forgetUnusedImages } from './image-cleanup';
+import { MAX_LOCATIONS } from './locations';
 import { parseFacebook, parseInstagram, parseMapUrl, parsePhone, parseTiktok } from './owner-input';
 import { hasLetterOrDigit } from './slugify';
 
@@ -10,6 +11,7 @@ export const MY_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1)`;
 export const MY_ACTIVE_RESTAURANT = `(SELECT id FROM restaurants WHERE owner_id = $1 AND status = 'active')`;
 
 export const MAX_CATEGORIES = 50;
+export { MAX_LOCATIONS }; // branches of one restaurant (see locations.ts)
 export const NAME_MAX = 80;
 
 export type Currencies = 'USD' | 'LBP' | 'BOTH';
@@ -20,13 +22,17 @@ export const fail = (status: number, error: string): Result => ({ ok: false, sta
 
 export type OwnerRestaurant = {
   id: string; name: string; public_slug: string; status: 'active' | 'suspended';
-  currencies: Currencies; phone_number: string | null; map_url: string | null;
+  currencies: Currencies; phone_number: string | null;
   instagram_url: string | null; facebook_url: string | null; tiktok_url: string | null; menu_direction: Direction;
+  locations: { name: string; map_url: string }[]; // the branches, in the order the owner chose
 };
 
 export async function getOwnerRestaurant(db: Db, ownerId: string): Promise<OwnerRestaurant | null> {
   const res = await db.query(
-    `SELECT id, name, public_slug, status, currencies, phone_number, map_url, instagram_url, facebook_url, tiktok_url, menu_direction FROM restaurants WHERE owner_id = $1`,
+    `SELECT id, name, public_slug, status, currencies, phone_number, instagram_url, facebook_url, tiktok_url, menu_direction,
+       COALESCE((SELECT json_agg(json_build_object('name', l.name, 'map_url', l.map_url) ORDER BY l.sort_order, l.id)
+                 FROM restaurant_locations l WHERE l.restaurant_id = restaurants.id), '[]'::json) AS locations
+     FROM restaurants WHERE owner_id = $1`,
     [ownerId],
   );
   return res.rows[0] ?? null;
@@ -52,26 +58,52 @@ function checkName(raw: string, what: string): { ok: true; name: string } | { ok
   return { ok: true, name };
 }
 
+export type LocationInput = { name: string; mapUrl: string };
+
+/**
+ * The branches as the owner typed them. A row left completely empty is ignored (the "add a branch" row he did not
+ * fill). Every other row needs a name and a valid map link; the first problem is reported with the number of its row.
+ */
+function parseLocations(
+  list: LocationInput[],
+): { ok: true; value: { name: string; map_url: string; sort_order: number }[] } | { ok: false; error: string } {
+  // `shown` = the row as the owner sees it on the page (a blank row above still counts), `sort_order` = the place among the saved ones
+  const rows = list.map((l, i) => ({ ...l, shown: i + 1 })).filter((l) => l.name.trim() !== '' || l.mapUrl.trim() !== '');
+  if (rows.length > MAX_LOCATIONS) return { ok: false, error: `لا يمكن إضافة أكثر من ${MAX_LOCATIONS} فرعًا` };
+  const value: { name: string; map_url: string; sort_order: number }[] = [];
+  for (const [i, row] of rows.entries()) {
+    const at = `الفرع رقم ${row.shown}: `;
+    const name = checkName(row.name, 'اسم الفرع');
+    if (!name.ok) return { ok: false, error: at + name.error };
+    const map = parseMapUrl(row.mapUrl);
+    if (!map.ok) return { ok: false, error: at + map.error };
+    if (map.value === null) return { ok: false, error: at + 'رابط الخريطة مطلوب' };
+    value.push({ name: name.name, map_url: map.value, sort_order: i });
+  }
+  return { ok: true, value };
+}
+
 /**
  * Saves the restaurant settings. The public link (slug) never changes, even when the name does,
  * so links already printed on tables keep working.
  * Choosing a currency is refused while some item or size has no price in it: the same statement
  * counts them and only updates when there are none.
  * `direction` is optional: a settings page that was opened before this field existed still saves, and the
- * restaurant keeps the direction it has.
+ * restaurant keeps the direction it has. `locations` (the branches) is optional the same way: left out, the branches
+ * stay as they are; given, it REPLACES the whole list, in the same statement as the rest (all saved or nothing saved).
  */
 export async function saveSettings(
   db: Db,
   ownerId: string,
-  input: { name: string; currencies: Currencies; phone: string; mapUrl: string; instagram: string; facebook: string; tiktok: string; direction?: Direction },
+  input: { name: string; currencies: Currencies; phone: string; instagram: string; facebook: string; tiktok: string; direction?: Direction; locations?: LocationInput[] },
 ): Promise<Result> {
   const name = checkName(input.name, 'اسم المطعم');
   if (!name.ok) return fail(400, name.error);
   if (input.direction !== undefined && !isDirection(input.direction)) return fail(400, 'اتجاه القائمة غير صالح');
   const phone = parsePhone(input.phone);
   if (!phone.ok) return fail(400, phone.error);
-  const map = parseMapUrl(input.mapUrl);
-  if (!map.ok) return fail(400, map.error);
+  const places = input.locations === undefined ? null : parseLocations(input.locations);
+  if (places && !places.ok) return fail(400, places.error);
   const instagram = parseInstagram(input.instagram);
   if (!instagram.ok) return fail(400, instagram.error);
   const facebook = parseFacebook(input.facebook);
@@ -94,14 +126,23 @@ export async function saveSettings(
        ) AS n
      ),
      upd AS (
-       UPDATE restaurants SET name = $3, currencies = $2::text, phone_number = $4, map_url = $5,
-           instagram_url = $6, facebook_url = $7, tiktok_url = $8, menu_direction = COALESCE($9::text, menu_direction)
+       UPDATE restaurants SET name = $3, currencies = $2::text, phone_number = $4,
+           instagram_url = $5, facebook_url = $6, tiktok_url = $7, menu_direction = COALESCE($8::text, menu_direction)
        WHERE id = (SELECT id FROM r) AND (SELECT n FROM missing) = 0
        RETURNING id
+     ),
+     gone AS (
+       DELETE FROM restaurant_locations WHERE $9::jsonb IS NOT NULL AND restaurant_id IN (SELECT id FROM upd)
+     ),
+     added AS (
+       INSERT INTO restaurant_locations (restaurant_id, name, map_url, sort_order)
+       SELECT u.id, x.name, x.map_url, x.sort_order
+       FROM upd u, jsonb_to_recordset($9::jsonb) AS x(name text, map_url text, sort_order int)
+       ORDER BY x.sort_order LIMIT ${MAX_LOCATIONS}
      )
      SELECT (SELECT id FROM r) AS restaurant_id, (SELECT n FROM missing)::int AS missing,
             EXISTS (SELECT 1 FROM upd) AS updated`,
-    [ownerId, input.currencies, name.name, phone.value, map.value, instagram.value, facebook.value, tiktok.value, input.direction ?? null],
+    [ownerId, input.currencies, name.name, phone.value, instagram.value, facebook.value, tiktok.value, input.direction ?? null, places ? JSON.stringify(places.value) : null],
   );
   const row = res.rows[0];
   if (!row?.restaurant_id) return explain(db, ownerId, fail(404, 'المطعم غير موجود'));
