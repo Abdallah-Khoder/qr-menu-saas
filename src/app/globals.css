@@ -188,6 +188,7 @@ fieldset.plain:disabled { opacity: .6; }
 .cat-arrow { flex: none; transition: rotate .2s; }
 .cat-toggle[aria-expanded="true"] .cat-arrow { rotate: 180deg; }
 .cat-body { margin-top: 8px; }
+.cat-body[hidden] { display: none; }
 .item-form { width: 100%; padding: 12px 0 16px; }
 .item-form textarea, .item-form select {
   width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit;
