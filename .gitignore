@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# database backups: they hold emails and password hashes, never commit them
+backups/
+
 # build output
 .next/
 out/

@@ -13,7 +13,11 @@
     "migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "create-admin": "node --env-file=.env.local scripts/create-admin.mjs",
     "migrate:prod": "node --env-file=.env.production.local scripts/migrate.mjs --confirm",
-    "create-admin:prod": "node --env-file=.env.production.local scripts/create-admin.mjs --confirm"
+    "create-admin:prod": "node --env-file=.env.production.local scripts/create-admin.mjs --confirm",
+    "backup": "node --env-file=.env.local scripts/backup.mjs",
+    "backup:prod": "node --env-file=.env.production.local scripts/backup.mjs",
+    "restore": "node --env-file=.env.local scripts/restore.mjs",
+    "restore:prod": "node --env-file=.env.production.local scripts/restore.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.1",
