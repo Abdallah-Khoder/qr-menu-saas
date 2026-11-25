@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import CategoryItems, { toggled, type Fold } from '../src/components/CategoryItems';
+import CategoryItems, { opened, toggled, type Fold } from '../src/components/CategoryItems';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: () => {} }) }));
 
@@ -54,17 +54,32 @@ describe('a category on the menu page (what the server sends)', () => {
 describe('closing keeps what the owner typed (the list is hidden, never taken away)', () => {
   const two = [item('i1', 'Nutella'), item('i2', 'Lotus')];
 
-  it('the arrow goes never → open → closed → open → closed', () => {
-    expect(toggled('never')).toBe('open');
+  it('the arrow goes never → mounting (built closed, opens one frame later) → closed → open → closed', () => {
+    expect(toggled('never')).toBe('mounting');
     expect(toggled('open')).toBe('closed');
     expect(toggled('closed')).toBe('open');
+    expect(toggled('mounting')).toBe('closed'); // pressed again within that one frame: the owner wants it shut
+  });
+
+  it('"+ إضافة منتج" opens the same way: the first time folded (so it slides), later straight away', () => {
+    expect(opened('never')).toBe('mounting');
+    expect(opened('closed')).toBe('open');
+    expect(opened('open')).toBe('open');
+    expect(opened('mounting')).toBe('open');
+  });
+
+  it('just built (the one frame before it opens): the list is on the page but still FOLDED, so there is something to slide from', () => {
+    const out = html(two, false, 'mounting');
+    expect(out).toContain('aria-expanded="true"'); // the arrow already says "open"
+    expect(out).toContain('Nutella');
+    expect(out).toMatch(/<div class="cat-body" id="[^"]+" data-open="false">/);
   });
 
   it('opened: the list is on the page and shown', () => {
     const out = html(two, false, 'open');
     expect(out).toContain('aria-expanded="true"');
     expect(out).toContain('Nutella');
-    expect(out).toMatch(/<div class="cat-body" id="[^"]+"><ul class="rows">/);
+    expect(out).toMatch(/<div class="cat-body" id="[^"]+" data-open="true"><div class="cat-inner"><ul class="rows">/);
   });
 
   it('closed after having been opened: the list is STILL on the page (so its forms keep their state), only hidden', () => {
@@ -72,7 +87,8 @@ describe('closing keeps what the owner typed (the list is hidden, never taken aw
     expect(out).toContain('aria-expanded="false"');
     expect(out).toContain('Nutella');
     expect(out).toContain('Lotus');
-    expect(out).toMatch(/<div class="cat-body" id="[^"]+" hidden="">/);
+    expect(out).toMatch(/<div class="cat-body" id="[^"]+" data-open="false">/);
+    expect(out).not.toContain('hidden=""'); // folded to zero height by the style, not taken out with display: none (that cannot slide)
   });
 
   it('never opened: nothing of the list is built (the page stays light)', () => {
@@ -90,10 +106,41 @@ describe('the arrow style', () => {
   });
   it('its turning is switched off for people who asked for less motion', () => {
     const block = css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/)![0];
-    expect(block).toMatch(/\.cat-arrow \{ transition: none; \}/);
+    expect(block).toMatch(/\.cat-arrow, \.cat-body \{ transition: none; \}/);
+    expect(block).toMatch(/\.cat-body\[data-open="true"\][^{]*\{ animation: none; \}/);
   });
-  it('a hidden list really disappears (the display rule must not win over the hidden attribute)', () => {
-    expect(css).toMatch(/\.cat-body\[hidden\] \{ display: none; \}/);
+  const rule = (selector: string) => css.match(new RegExp(`(?:^|\\n)${selector.replace(/[.[\]"=]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+
+  it('closed: zero height and invisible (so nothing inside can be tabbed to), and it slides on the way shut', () => {
+    const r = rule('.cat-body');
+    expect(r).toMatch(/grid-template-rows:\s*0fr/);
+    expect(r).toMatch(/visibility:\s*hidden/);
+    expect(r).toMatch(/transition:\s*grid-template-rows \.45s[^;]*visibility 0s \.45s/); // hidden only AFTER the slide is over
+  });
+  it('open: full height, visible at once, and the SAME transition as closing (so it can turn round half way, which an animation cannot)', () => {
+    const r = rule('.cat-body[data-open="true"]');
+    expect(r).toMatch(/grid-template-rows:\s*1fr/);
+    expect(r).toMatch(/visibility:\s*visible/);
+    expect(r).toMatch(/transition:\s*grid-template-rows \.45s[^;]*visibility 0s;/);
+    expect(r).not.toContain('animation'); // an animation would start from zero again when the arrow is pressed during the closing slide
+    expect(css).not.toContain('@keyframes cat-open');
+  });
+  it('the content is clipped while it slides', () => {
+    expect(rule('.cat-inner')).toMatch(/min-height:\s*0/);
+    expect(rule('.cat-inner')).toMatch(/overflow:\s*hidden/);
+  });
+  it('the products rise one after the other (each opening), "backwards" not "both", and never with transform', () => {
+    const rise = css.match(/\.cat-body\[data-open="true"\] \.rows > li[^{]*\{([^}]*)\}/)![1];
+    expect(rise).toMatch(/animation:\s*cat-rise [^;]*backwards;/);
+    expect(rise).not.toContain('both');
+    expect(rise).toMatch(/animation-delay:\s*calc\(var\(--n, 0\) \* 70ms/);
+    expect(css).toMatch(/@keyframes cat-rise \{ from \{ opacity: 0; translate: 0 14px; \} to \{ opacity: 1; translate: 0 0; \} \}/);
+    expect(css).not.toMatch(/@keyframes cat-(?:open|rise)[^\n]*transform/);
+    for (const n of [2, 3, 4, 5, 6, 7]) expect(css).toContain(`.cat-body .rows > li:nth-child(${n}) { --n: ${n - 1}; }`);
+    expect(css).toContain('.cat-body .rows > li:nth-child(n + 8) { --n: 7; }'); // the 8th and after come together
+  });
+  it('the add form and the empty note rise too', () => {
+    expect(css).toMatch(/\.cat-body\[data-open="true"\] \.item-form, \.cat-body\[data-open="true"\] \.empty \{/);
   });
   it('the title line is tall enough to tap', () => {
     expect(css).toMatch(/\.cat-toggle \{[^}]*min-height: 44px/);
