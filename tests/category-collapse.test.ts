@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import CategoryItems, { toggled, type Fold } from '../src/components/CategoryItems';
+import CategoryItems, { opened, toggled, type Fold } from '../src/components/CategoryItems';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: () => {} }) }));
 
@@ -54,10 +54,25 @@ describe('a category on the menu page (what the server sends)', () => {
 describe('closing keeps what the owner typed (the list is hidden, never taken away)', () => {
   const two = [item('i1', 'Nutella'), item('i2', 'Lotus')];
 
-  it('the arrow goes never → open → closed → open → closed', () => {
-    expect(toggled('never')).toBe('open');
+  it('the arrow goes never → mounting (built closed, opens one frame later) → closed → open → closed', () => {
+    expect(toggled('never')).toBe('mounting');
     expect(toggled('open')).toBe('closed');
     expect(toggled('closed')).toBe('open');
+    expect(toggled('mounting')).toBe('closed'); // pressed again within that one frame: the owner wants it shut
+  });
+
+  it('"+ إضافة منتج" opens the same way: the first time folded (so it slides), later straight away', () => {
+    expect(opened('never')).toBe('mounting');
+    expect(opened('closed')).toBe('open');
+    expect(opened('open')).toBe('open');
+    expect(opened('mounting')).toBe('open');
+  });
+
+  it('just built (the one frame before it opens): the list is on the page but still FOLDED, so there is something to slide from', () => {
+    const out = html(two, false, 'mounting');
+    expect(out).toContain('aria-expanded="true"'); // the arrow already says "open"
+    expect(out).toContain('Nutella');
+    expect(out).toMatch(/<div class="cat-body" id="[^"]+" data-open="false">/);
   });
 
   it('opened: the list is on the page and shown', () => {
@@ -100,14 +115,15 @@ describe('the arrow style', () => {
     const r = rule('.cat-body');
     expect(r).toMatch(/grid-template-rows:\s*0fr/);
     expect(r).toMatch(/visibility:\s*hidden/);
-    expect(r).toMatch(/transition:\s*grid-template-rows \.4s[^;]*visibility 0s \.4s/); // hidden only AFTER the slide is over
+    expect(r).toMatch(/transition:\s*grid-template-rows \.45s[^;]*visibility 0s \.45s/); // hidden only AFTER the slide is over
   });
-  it('open: full height, visible at once, and a slower slide down that also plays the first time the list is built', () => {
+  it('open: full height, visible at once, and the SAME transition as closing (so it can turn round half way, which an animation cannot)', () => {
     const r = rule('.cat-body[data-open="true"]');
     expect(r).toMatch(/grid-template-rows:\s*1fr/);
     expect(r).toMatch(/visibility:\s*visible/);
-    expect(r).toMatch(/animation:\s*cat-open \.5s/);
-    expect(css).toMatch(/@keyframes cat-open \{ from \{ grid-template-rows: 0fr; \} to \{ grid-template-rows: 1fr; \} \}/);
+    expect(r).toMatch(/transition:\s*grid-template-rows \.45s[^;]*visibility 0s;/);
+    expect(r).not.toContain('animation'); // an animation would start from zero again when the arrow is pressed during the closing slide
+    expect(css).not.toContain('@keyframes cat-open');
   });
   it('the content is clipped while it slides', () => {
     expect(rule('.cat-inner')).toMatch(/min-height:\s*0/);

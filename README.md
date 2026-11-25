@@ -160,7 +160,9 @@ restaurant's category id just gets 404.
   together with the form. The open or closed state is not saved (it lives only on the page). Once opened, a list is
   only HIDDEN when closed, never taken away, so what the owner typed in an "add" or "edit" form is kept. The list
   slides open and shut (a grid row from `0fr` to `1fr`, about half a second, `visibility: hidden` after the slide so
-  nothing inside can be tabbed to) and the products rise one after the other each time it opens (`--n` per row, the
+  nothing inside can be tabbed to). Opening and closing are ONE transition, so pressing the arrow again half way
+  turns it round from where it is; the first time the list is built folded and opens one frame later, so that
+  first opening slides too and the products rise one after the other each time it opens (`--n` per row, the
   8th and after together); for people who asked for less motion there is no slide and no rise. Nothing changes for
   the customer's menu.
 - **Suspended restaurants:** when the admin suspends a restaurant, its owner can still log in and look,
