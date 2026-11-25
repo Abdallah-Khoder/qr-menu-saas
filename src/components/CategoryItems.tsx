@@ -6,7 +6,7 @@ import ItemRow from './ItemRow';
 
 /**
  * 'never' = not opened yet: nothing of the list is built (the page stays light, every category starts like this).
- * After the first opening the list stays on the page for good and is only HIDDEN when closed: taking it away would
+ * After the first opening the list stays on the page for good and is only HIDDEN when closed (folded to zero height, see .cat-body in globals.css): taking it away would
  * throw away what the owner typed in an open "add" form or "edit" form (React forgets the state of what it removes).
  */
 export type Fold = 'never' | 'open' | 'closed';
@@ -42,23 +42,25 @@ export default function CategoryItems({
         {(!adding || !open) && <button className="btn small" disabled={disabled} onClick={() => { setFold('open'); setAdding(true); }}>+ إضافة منتج</button>}
       </div>
       {fold !== 'never' && (
-        <div className="cat-body" id={bodyId} hidden={!open}>
-          {adding && (
-            <ItemForm
-              categories={categories} categoryId={category.id} currencies={currencies} disabled={disabled}
-              onCancel={() => setAdding(false)} onDone={() => { setAdding(false); router.refresh(); }}
-            />
-          )}
-          {items.length === 0 && !adding ? (
-            <div className="empty"><b>لا توجد منتجات في هذا القسم</b>اضغط «إضافة منتج» للبدء.</div>
-          ) : (
-            <ul className="rows">
-              {items.map((item, i) => (
-                <ItemRow key={item.id} item={item} categories={categories} currencies={currencies}
-                  first={i === 0} last={i === items.length - 1} disabled={disabled} />
-              ))}
-            </ul>
-          )}
+        <div className="cat-body" id={bodyId} data-open={open}>
+          <div className="cat-inner">
+            {adding && (
+              <ItemForm
+                categories={categories} categoryId={category.id} currencies={currencies} disabled={disabled}
+                onCancel={() => setAdding(false)} onDone={() => { setAdding(false); router.refresh(); }}
+              />
+            )}
+            {items.length === 0 && !adding ? (
+              <div className="empty"><b>لا توجد منتجات في هذا القسم</b>اضغط «إضافة منتج» للبدء.</div>
+            ) : (
+              <ul className="rows">
+                {items.map((item, i) => (
+                  <ItemRow key={item.id} item={item} categories={categories} currencies={currencies}
+                    first={i === 0} last={i === items.length - 1} disabled={disabled} />
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </section>

@@ -158,8 +158,11 @@ restaurant's category id just gets 404.
   list starts CLOSED, so an owner with many products does not scroll for ages. The arrow (a real button inside the
   heading, with `aria-expanded`) opens and closes the list; "+ إضافة منتج" stays on the title line and opens the list
   together with the form. The open or closed state is not saved (it lives only on the page). Once opened, a list is
-  only HIDDEN when closed, never taken away, so what the owner typed in an "add" or "edit" form is kept. Nothing
-  changes for the customer's menu.
+  only HIDDEN when closed, never taken away, so what the owner typed in an "add" or "edit" form is kept. The list
+  slides open and shut (a grid row from `0fr` to `1fr`, about half a second, `visibility: hidden` after the slide so
+  nothing inside can be tabbed to) and the products rise one after the other each time it opens (`--n` per row, the
+  8th and after together); for people who asked for less motion there is no slide and no rise. Nothing changes for
+  the customer's menu.
 - **Suspended restaurants:** when the admin suspends a restaurant, its owner can still log in and look,
   but every write is refused (403, "تم إيقاف مطعمك من الإدارة..."). This is enforced in the SQL of each
   write (`status = 'active'` next to the owner filter), not only by hiding buttons, so a direct request
