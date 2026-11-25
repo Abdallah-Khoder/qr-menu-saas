@@ -159,6 +159,36 @@ describe('restoring a backup into an empty database', () => {
   });
 });
 
+describe('two restores at the same moment', () => {
+  it('the checks run inside the transaction, after the tables are locked (so the second one cannot slip in)', async () => {
+    const { pg } = await filled();
+    const data = file(await exportBackup(pg));
+    const target = await makeDb();
+    const queries: string[] = [];
+    await restoreBackup({ query: (t, p) => { queries.push(t); return target.query(t, p as never); } }, data);
+    const lock = queries.findIndex((q) => /^LOCK TABLE .* IN EXCLUSIVE MODE$/.test(q));
+    expect(lock).toBeGreaterThan(0);
+    expect(queries[lock - 1]).toBe('BEGIN');
+    expect(queries.filter((q) => /schema_migrations/.test(q))).toHaveLength(2); // once for a clear message, once under the lock
+    const firstCheck = queries.findLastIndex((q) => /schema_migrations/.test(q));
+    const firstCount = queries.findIndex((q) => /COUNT\(\*\)/.test(q));
+    expect(firstCheck).toBeGreaterThan(lock);
+    expect(firstCount).toBeGreaterThan(lock);
+    expect(queries.at(-1)).toBe('COMMIT');
+  });
+
+  it('a refused restore (not empty, other version) ends its transaction and leaves nothing locked', async () => {
+    const { pg } = await filled();
+    const data = file(await exportBackup(pg));
+    const target = await makeDb();
+    await add.tenant(target, 'already-here');
+    await expect(restoreBackup(target, data)).rejects.toThrow(/not empty/);
+    expect(await count(target, 'users')).toBe(1); // a still-open transaction would make this wait or fail
+    await target.query(`DELETE FROM users`);
+    expect(await restoreBackup(target, data)).toBeTruthy(); // and a later restore works
+  });
+});
+
 describe('the commands', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8')).scripts as Record<string, string>;
   it('backup and restore exist for the dev and the real database, each with its own env file', () => {
@@ -174,7 +204,7 @@ describe('the commands', () => {
     expect(readFileSync('scripts/restore.mjs', 'utf8')).toMatch(/Type "yes"[\s\S]*restoreBackup/);
     expect(readFileSync('scripts/backup.mjs', 'utf8')).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE)\b/);
   });
-  it('the backup file is private to its owner', () => {
-    expect(readFileSync('scripts/backup.mjs', 'utf8')).toContain('mode: 0o600');
+  it('the backup file is private to its owner, and an older backup is never overwritten', () => {
+    expect(readFileSync('scripts/backup.mjs', 'utf8')).toMatch(/mode: 0o600, flag: 'wx'/);
   });
 });

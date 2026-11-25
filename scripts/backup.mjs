@@ -25,7 +25,7 @@ try {
   mkdirSync(dir, { recursive: true });
   const stamp = data.createdAt.slice(0, 19).replace(/[:T]/g, '-'); // 2026-11-25-13-40-05
   const file = `${dir}backup-${host.split('.')[0]}-${stamp}.json`;
-  writeFileSync(file, JSON.stringify(data, null, 1), { mode: 0o600 });
+  writeFileSync(file, JSON.stringify(data, null, 1), { mode: 0o600, flag: 'wx' } /* wx: never overwrite an older backup */);
   chmodSync(file, 0o600);
   console.log(`Saved: ${file}`);
   console.log(Object.entries(data.counts).map(([t, n]) => `  ${t}: ${n}`).join('\n'));

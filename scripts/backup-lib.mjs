@@ -34,6 +34,16 @@ export async function exportBackup(client, { now = new Date(), database = null }
   }
 }
 
+async function sameVersion(client, data) {
+  const here = (await client.query('SELECT filename FROM schema_migrations ORDER BY filename')).rows.map((r) => r.filename);
+  if (JSON.stringify(here) !== JSON.stringify(data.migrations)) {
+    throw new Error(
+      `The database and the backup are not at the same version.\n  backup:   ${data.migrations.join(', ')}\n  database: ${here.join(', ') || '(no migrations yet)'}\n` +
+      'Run the migrations on this database first (npm run migrate, or npm run migrate:prod for the real one) until both lists are the same.',
+    );
+  }
+}
+
 /**
  * Puts a backup into an EMPTY database that already has the same migrations. It refuses anything else, and it is
  * all-or-nothing: a problem half way leaves the database exactly as empty as it was.
@@ -45,21 +55,21 @@ export async function restoreBackup(client, data) {
     if (data.counts?.[t] !== data.tables[t].length) throw new Error(`The backup file is damaged: "${t}" should have ${data.counts?.[t]} rows but has ${data.tables[t].length}.`);
   }
 
-  const here = (await client.query('SELECT filename FROM schema_migrations ORDER BY filename')).rows.map((r) => r.filename);
-  if (JSON.stringify(here) !== JSON.stringify(data.migrations)) {
-    throw new Error(
-      `The database and the backup are not at the same version.\n  backup:   ${data.migrations.join(', ')}\n  database: ${here.join(', ') || '(no migrations yet)'}\n` +
-      'Run the migrations on this database first (npm run migrate) until both lists are the same.',
-    );
-  }
-
-  for (const t of BACKUP_TABLES) {
-    const n = (await client.query(`SELECT COUNT(*)::int AS n FROM ${t}`)).rows[0].n;
-    if (n > 0) throw new Error(`The database is not empty ("${t}" has ${n} rows). A restore never overwrites anything: use an empty database.`);
-  }
+  await sameVersion(client, data); // first, so a database without tables gets a clear message
 
   await client.query('BEGIN');
   try {
+    // Lock first, check after: two restores at the same moment cannot both see an empty database. The second one
+    // waits here until the first has finished, then finds the tables full and refuses.
+    await client.query(`LOCK TABLE ${BACKUP_TABLES.join(', ')} IN EXCLUSIVE MODE`);
+
+    await sameVersion(client, data); // again, now that nothing can change under us
+
+    for (const t of BACKUP_TABLES) {
+      const n = (await client.query(`SELECT COUNT(*)::int AS n FROM ${t}`)).rows[0].n;
+      if (n > 0) throw new Error(`The database is not empty ("${t}" has ${n} rows). A restore never overwrites anything: use an empty database.`);
+    }
+
     for (const t of BACKUP_TABLES) {
       if (data.tables[t].length === 0) continue;
       await client.query(`INSERT INTO ${t} SELECT * FROM jsonb_populate_recordset(NULL::${t}, $1::jsonb)`, [JSON.stringify(data.tables[t])]);

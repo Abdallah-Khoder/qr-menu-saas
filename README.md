@@ -366,7 +366,7 @@ where the files live is in ONE file,
 - **In the file:** users, invites, restaurants, categories, items, sizes and branches.
 - **Not in the file:** the photos (they live in the image store; the rows only keep their links) and the short-lived tables (reset codes, login attempts).
 - **Privacy:** the file holds emails and password hashes. Keep it private. `backups/` is ignored by git, so it can never be committed by mistake.
-- **Restore:** `npm run restore -- backups/<file>.json` (or `restore:prod`). It asks you to type `yes`, and it only goes into an EMPTY database that has the same migrations (run `npm run migrate` first). It never overwrites anything, and it is all-or-nothing: if anything fails, the database is left as empty as it was.
+- **Restore:** `npm run restore -- backups/<file>.json` (or `restore:prod`). It asks you to type `yes`, and it only goes into an EMPTY database that has the same migrations (run `npm run migrate` first for `restore`, or `npm run migrate:prod` first for `restore:prod`). It never overwrites anything, and it is all-or-nothing: if anything fails, the database is left as empty as it was.
 - **Adding a table later:** a test fails until the new table is added to `BACKUP_TABLES` or `SKIPPED_TABLES` in `scripts/backup-lib.mjs`, so a backup can never silently miss it.
 - Neon's own free plan only keeps 6 hours of history (plus manual snapshots), so run `npm run backup:prod` yourself now and then, and before any risky migration.
 
