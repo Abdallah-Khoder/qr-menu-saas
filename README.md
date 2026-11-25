@@ -154,6 +154,11 @@ restaurant's category id just gets 404.
 - **Categories:** add, rename, move up/down, delete (its items are deleted with it, the confirmation
   window says how many). Up to 50 per restaurant. Moving renumbers 1..n inside one statement, so
   duplicates or gaps in `sort_order` cannot break the order.
+- **Products on the menu page:** each category is one title line (name, number of products, an arrow) and its
+  list starts CLOSED, so an owner with many products does not scroll for ages. The arrow (a real button inside the
+  heading, with `aria-expanded`) opens and closes the list; "+ إضافة منتج" stays on the title line and opens the list
+  together with the form. The open or closed state is not saved (it lives only on the page). Nothing changes for
+  the customer's menu.
 - **Suspended restaurants:** when the admin suspends a restaurant, its owner can still log in and look,
   but every write is refused (403, "تم إيقاف مطعمك من الإدارة..."). This is enforced in the SQL of each
   write (`status = 'active'` next to the owner filter), not only by hiding buttons, so a direct request
