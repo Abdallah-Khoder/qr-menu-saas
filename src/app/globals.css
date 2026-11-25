@@ -178,6 +178,17 @@ fieldset.plain:disabled { opacity: .6; }
 /* Items */
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .panel-head h2 { margin: 0; }
+/* a category on the menu page: the title line is a button that opens and closes the list (the list starts closed) */
+.cat-panel .panel-head { margin-bottom: 0; }
+.cat-title { flex: 1; min-width: 0; }
+.cat-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.cat-toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 8px; }
+.cat-name { font-size: 1.1rem; font-weight: 700; overflow-wrap: anywhere; }
+.cat-toggle small { color: var(--muted); font-weight: 400; font-size: .85rem; white-space: nowrap; }
+.cat-arrow { flex: none; transition: rotate .2s; }
+.cat-toggle[aria-expanded="true"] .cat-arrow { rotate: 180deg; }
+.cat-body { margin-top: 8px; }
+.cat-body[hidden] { display: none; }
 .item-form { width: 100%; padding: 12px 0 16px; }
 .item-form textarea, .item-form select {
   width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit;
@@ -305,6 +316,7 @@ button.pm-icon { padding: 0; font: inherit; cursor: pointer; }
 @keyframes pm-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
 @keyframes pm-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
+  .cat-arrow { transition: none; }
   .pm-size-btn, .pm-photo-btn img, .pm-icon, .pm-tabs a, .pm-float-icon, .pm-float-toggle, .pm-top { transition: none; }
   .pm-price-swap, .pm-viewer[open], .pm-viewer[open]::backdrop, .pm-head h1, .pm-float-toggle, .pm-tabs a, .pm-item, .pm-branches { animation: none; }
   .pm-size-btn:active, .pm-photo-btn:hover img, .pm-photo-btn:active img, .pm-icon:hover, .pm-icon:active, .pm-tabs a:active, .pm-float-toggle:active, .pm-top:active { transform: none; }
